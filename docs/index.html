@@ -152,7 +152,7 @@
 	<div id="entry-overlay">
 		<div id="entry-panel">
 			<h1 id="entry-title">choose your shirt</h1>
-			<div id="entry-subtitle">build v12 desktop-restore</div>
+			<div id="entry-subtitle">build v13 facecam</div>
 
 			<input
 				id="name-input"
@@ -195,7 +195,7 @@
 	<canvas id="image-convert-canvas"></canvas>
 
 	<script>
-		const BUILD_TAG = "v12-desktop-restore";
+		const BUILD_TAG = "v13-facecam";
 
 		const overlay = document.getElementById("entry-overlay");
 		const nameInput = document.getElementById("name-input");
@@ -214,7 +214,7 @@
 		const imageConvertCtx = imageConvertCanvas.getContext("2d");
 
 		let godotFaceStream = null;
-		let godotFaceSize = 96;
+		let godotFaceSize = 64;
 		let selectedImageDataUrl = "";
 		let selectedImageName = "";
 
@@ -281,7 +281,6 @@
 		}
 
 		window.openGodotImagePicker = function () {
-			console.log("[dreambox]", BUILD_TAG, "open image picker");
 			godotImageInput.value = "";
 			godotImageInput.click();
 		};
@@ -294,15 +293,11 @@
 			const file = godotImageInput.files && godotImageInput.files[0];
 			if (!file) return;
 
-			console.log("[dreambox]", BUILD_TAG, "file selected", file.name, file.type, file.size);
-
 			try {
 				const jpegDataUrl = await convertFileToJpegDataUrl(file);
 
 				selectedImageDataUrl = jpegDataUrl;
 				selectedImageName = file.name || "image.jpg";
-
-				console.log("[dreambox]", BUILD_TAG, "image converted bytes", selectedImageDataUrl.length);
 
 				fileName.textContent = selectedImageName;
 				previewImage.src = selectedImageDataUrl;
@@ -330,19 +325,9 @@
 				return;
 			}
 
-			console.log("[dreambox]", BUILD_TAG, "start pressed", {
-				name: name,
-				shirtBytes: selectedImageDataUrl.length,
-				facecam: facecamCheckbox.checked,
-				hasCallback: !!window.godotWebStart
-			});
-
 			if (window.godotWebStart) {
 				window.godotWebStart(name, selectedImageDataUrl, facecamCheckbox.checked);
-				console.log("[dreambox]", BUILD_TAG, "godotWebStart invoked");
 				overlay.style.display = "none";
-			} else {
-				console.warn("[dreambox]", BUILD_TAG, "godotWebStart missing");
 			}
 		}
 
@@ -350,7 +335,7 @@
 
 		window.startGodotFacecam = async function (width, height) {
 			try {
-				godotFaceSize = width || 96;
+				godotFaceSize = Math.max(32, width || 64);
 
 				if (godotFaceStream) {
 					godotFaceStream.getTracks().forEach(track => track.stop());
@@ -360,8 +345,9 @@
 				const stream = await navigator.mediaDevices.getUserMedia({
 					video: {
 						facingMode: "user",
-						width: { ideal: 320 },
-						height: { ideal: 320 }
+						width: { ideal: 160 },
+						height: { ideal: 160 },
+						frameRate: { ideal: 8, max: 12 }
 					},
 					audio: false
 				});
@@ -372,8 +358,6 @@
 
 				godotFaceCanvas.width = godotFaceSize;
 				godotFaceCanvas.height = godotFaceSize;
-
-				console.log("[dreambox]", BUILD_TAG, "Godot facecam started");
 			} catch (err) {
 				console.error("[dreambox]", BUILD_TAG, "Godot facecam failed:", err);
 			}
@@ -396,7 +380,7 @@
 				0, 0, godotFaceSize, godotFaceSize
 			);
 
-			return godotFaceCanvas.toDataURL("image/jpeg", 0.6);
+			return godotFaceCanvas.toDataURL("image/jpeg", 0.45);
 		};
 
 		window.stopGodotFacecam = function () {
@@ -408,8 +392,6 @@
 			if (godotFaceVideo) {
 				godotFaceVideo.srcObject = null;
 			}
-
-			console.log("[dreambox]", BUILD_TAG, "Godot facecam stopped");
 		};
 
 		(function () {
@@ -463,9 +445,9 @@
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 
 
-	<script src="index.js?v=12"></script>
+	<script src="index.js?v=13"></script>
 	<script>
-		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1605884,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1607004,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
 		engine.startGame({
 			canvas: document.getElementById("canvas")
 		});
