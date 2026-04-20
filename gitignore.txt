@@ -1,0 +1,13 @@
+# Godot
+.godot/
+.import/
+export_presets.cfg
+
+# Mac
+.DS_Store
+
+# Node
+node_modules/
+
+# Build output
+web_build/
