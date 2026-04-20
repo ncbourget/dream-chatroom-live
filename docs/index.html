@@ -152,7 +152,7 @@
 	<div id="entry-overlay">
 		<div id="entry-panel">
 			<h1 id="entry-title">choose your shirt</h1>
-			<div id="entry-subtitle">build v13 facecam</div>
+			<div id="entry-subtitle">build v14 facecam-color-80</div>
 
 			<input
 				id="name-input"
@@ -195,7 +195,7 @@
 	<canvas id="image-convert-canvas"></canvas>
 
 	<script>
-		const BUILD_TAG = "v13-facecam";
+		const BUILD_TAG = "v14-facecam-color-80";
 
 		const overlay = document.getElementById("entry-overlay");
 		const nameInput = document.getElementById("name-input");
@@ -214,11 +214,9 @@
 		const imageConvertCtx = imageConvertCanvas.getContext("2d");
 
 		let godotFaceStream = null;
-		let godotFaceSize = 64;
+		let godotFaceSize = 80;
 		let selectedImageDataUrl = "";
 		let selectedImageName = "";
-
-		console.log("[dreambox]", BUILD_TAG, "page loaded", navigator.userAgent);
 
 		function updateStartState() {
 			const hasName = nameInput.value.trim().length > 0;
@@ -335,7 +333,7 @@
 
 		window.startGodotFacecam = async function (width, height) {
 			try {
-				godotFaceSize = Math.max(32, width || 64);
+				godotFaceSize = Math.max(32, width || 80);
 
 				if (godotFaceStream) {
 					godotFaceStream.getTracks().forEach(track => track.stop());
@@ -345,8 +343,8 @@
 				const stream = await navigator.mediaDevices.getUserMedia({
 					video: {
 						facingMode: "user",
-						width: { ideal: 160 },
-						height: { ideal: 160 },
+						width: { ideal: 192 },
+						height: { ideal: 192 },
 						frameRate: { ideal: 8, max: 12 }
 					},
 					audio: false
@@ -445,9 +443,9 @@
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 
 
-	<script src="index.js?v=13"></script>
+	<script src="index.js?v=14"></script>
 	<script>
-		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1607004,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1604460,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
 		engine.startGame({
 			canvas: document.getElementById("canvas")
 		});
