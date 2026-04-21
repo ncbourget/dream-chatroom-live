@@ -35,7 +35,38 @@
 			display: none;
 		}
 
+		/* ========================= */
+		/* SHARED PANEL OVERLAY FEEL */
+		/* ========================= */
+
+		.overlay-backdrop {
+			position: fixed;
+			inset: 0;
+			z-index: 20;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 20px;
+			box-sizing: border-box;
+			background: rgba(17, 17, 17, 0.82);
+			backdrop-filter: blur(4px);
+		}
+
+		.mobile-panel {
+			width: min(92vw, 420px);
+			max-height: min(88vh, 900px);
+			background: rgba(20, 20, 20, 0.92);
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			padding: 18px;
+			box-sizing: border-box;
+			color: white;
+			overflow-y: auto;
+			overflow-x: hidden;
+		}
+
+		/* ========================= */
 		/* ENTRY OVERLAY */
+		/* ========================= */
 
 		#entry-overlay {
 			position: fixed;
@@ -139,8 +170,9 @@
 		#preview-image {
 			width: 100%;
 			height: 100%;
-			object-fit: cover;
+			object-fit: contain;
 			display: none;
+			background: #111;
 		}
 
 		#status-text {
@@ -150,46 +182,49 @@
 			margin-top: 10px;
 		}
 
-		/* GUESTBOOK */
+		/* ========================= */
+		/* GUESTBOOK OVERLAY */
+		/* ========================= */
 
 		#guestbook {
 			position: fixed;
 			inset: 0;
 			display: none;
 			z-index: 9999;
-			background: rgba(0, 0, 0, 0.94);
+			background: rgba(0, 0, 0, 0.82);
+			backdrop-filter: blur(4px);
+		}
+
+		#guestbook .guestbook-panel {
+			width: min(92vw, 420px);
+			max-height: min(88vh, 900px);
+			background: rgba(20, 20, 20, 0.92);
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			padding: 18px;
+			box-sizing: border-box;
 			color: white;
 			overflow-y: auto;
 			overflow-x: hidden;
 		}
 
-		.guestbook-container {
-			width: min(1100px, 100%);
-			min-height: 100%;
-			margin: 0 auto;
-			box-sizing: border-box;
-			padding: 24px 24px 20px 24px;
-			display: flex;
-			flex-direction: column;
-			gap: 20px;
-		}
-
 		.guestbook-topbar {
 			display: flex;
 			justify-content: space-between;
-			align-items: center;
+			align-items: flex-start;
 			gap: 12px;
+			margin-bottom: 18px;
 		}
 
 		.guestbook-title {
-			font-size: clamp(24px, 3vw, 40px);
+			font-size: clamp(28px, 6vw, 42px);
+			line-height: 1;
 			font-weight: 700;
-			letter-spacing: 0.02em;
+			margin: 0;
 		}
 
 		#closeGuestbook {
 			appearance: none;
-			border: 1px solid white;
+			border: 1px solid rgba(255,255,255,0.16);
 			background: white;
 			color: black;
 			padding: 10px 16px;
@@ -201,14 +236,14 @@
 		#entries {
 			display: grid;
 			grid-template-columns: repeat(2, minmax(0, 1fr));
-			column-gap: 22px;
-			row-gap: 28px;
+			column-gap: 16px;
+			row-gap: 24px;
 			align-content: start;
 		}
 
 		.entry {
-			border: 1px solid rgba(255,255,255,0.28);
-			padding: 14px;
+			border: 1px solid rgba(255,255,255,0.20);
+			padding: 12px;
 			display: flex;
 			flex-direction: column;
 			gap: 12px;
@@ -221,24 +256,29 @@
 			aspect-ratio: 1 / 1;
 			overflow: hidden;
 			background: #111;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border: 1px solid rgba(255,255,255,0.06);
 		}
 
 		.entry-thumb img {
 			width: 100%;
 			height: 100%;
 			display: block;
-			object-fit: cover;
+			object-fit: contain;
+			background: #111;
 		}
 
 		.entry-name {
-			font-size: 18px;
+			font-size: 15px;
 			font-weight: 700;
 			line-height: 1.08;
 			word-break: break-word;
 		}
 
 		.entry-date {
-			font-size: 13px;
+			font-size: 12px;
 			opacity: 0.8;
 			line-height: 1.35;
 			word-break: break-word;
@@ -249,7 +289,7 @@
 			justify-content: center;
 			align-items: center;
 			gap: 12px;
-			padding-top: 6px;
+			padding-top: 18px;
 		}
 
 		.pagination button {
@@ -278,42 +318,28 @@
 			font-size: 14px;
 			opacity: 0.75;
 			min-height: 18px;
-		}
-
-		@media (max-width: 900px) {
-			.guestbook-container {
-				padding: 16px 16px 20px 16px;
-				gap: 18px;
-			}
-
-			#entries {
-				grid-template-columns: repeat(2, minmax(0, 1fr));
-				column-gap: 16px;
-				row-gap: 34px;
-			}
-
-			.entry {
-				padding: 12px;
-				gap: 12px;
-			}
-
-			.entry-name {
-				font-size: 15px;
-			}
-
-			.entry-date {
-				font-size: 12px;
-				line-height: 1.4;
-			}
+			padding-top: 12px;
 		}
 
 		@media (max-width: 520px) {
-			.guestbook-topbar {
-				align-items: flex-start;
+			#entry-overlay,
+			#guestbook {
+				padding: 16px;
 			}
 
-			.guestbook-title {
-				font-size: 24px;
+			#entry-panel,
+			#guestbook .guestbook-panel {
+				width: min(92vw, 420px);
+				padding: 16px;
+			}
+
+			.guestbook-topbar {
+				margin-bottom: 16px;
+			}
+
+			#entries {
+				column-gap: 16px;
+				row-gap: 28px;
 			}
 		}
 	</style>
@@ -322,7 +348,7 @@
 	<div id="entry-overlay">
 		<div id="entry-panel">
 			<h1 id="entry-title">choose your shirt</h1>
-			<div id="entry-subtitle">build v17 guestbook-fix</div>
+			<div id="entry-subtitle">build v18 guestbook-panel-match</div>
 
 			<input
 				id="name-input"
@@ -354,8 +380,8 @@
 		</div>
 	</div>
 
-	<div id="guestbook">
-		<div class="guestbook-container">
+	<div id="guestbook" class="overlay-backdrop">
+		<div class="guestbook-panel mobile-panel">
 			<div class="guestbook-topbar">
 				<div class="guestbook-title">Guestbook</div>
 				<button id="closeGuestbook" type="button">Close</button>
@@ -384,7 +410,7 @@
 	<canvas id="image-convert-canvas"></canvas>
 
 	<script>
-		const BUILD_TAG = "v17-guestbook-fix";
+		const BUILD_TAG = "v18-guestbook-panel-match";
 		const GUESTBOOK_API_BASE = "https://dream-chatroom.onrender.com";
 
 		const overlay = document.getElementById("entry-overlay");
@@ -542,7 +568,7 @@
 		}
 
 		function showGuestbook() {
-			document.getElementById("guestbook").style.display = "block";
+			document.getElementById("guestbook").style.display = "flex";
 			window.lastMessage = "";
 			loadGuestbook(1);
 		}
@@ -737,7 +763,7 @@
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 
 
-	<script src="index.js?v=17"></script>
+	<script src="index.js?v=18"></script>
 	<script>
 		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1608140,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
 		engine.startGame({
