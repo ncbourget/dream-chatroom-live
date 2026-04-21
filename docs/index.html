@@ -1,317 +1,740 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-  <title>Dream Chatroom</title>
+	<meta charset="utf-8">
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+	/>
+	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+	<meta http-equiv="Pragma" content="no-cache" />
+	<meta http-equiv="Expires" content="0" />
+	<title>dreambox</title>
 
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: black;
-      font-family: Arial, Helvetica, sans-serif;
-    }
+	<style>
+		html, body {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			background: #111;
+			overflow: hidden;
+			font-family: Arial, Helvetica, sans-serif;
+		}
 
-    #godotFrame {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      border: none;
-      z-index: 1;
-      background: black;
-    }
+		#canvas {
+			width: 100%;
+			height: 100%;
+			display: block;
+		}
 
-    #guestbook {
-      position: fixed;
-      inset: 0;
-      display: none;
-      z-index: 9999;
-      background: rgba(0, 0, 0, 0.96);
-      color: white;
-      overflow: hidden;
-    }
+		#godot-face-video,
+		#godot-face-canvas,
+		#godot-image-input,
+		#image-convert-canvas {
+			display: none;
+		}
 
-    .guestbook-container {
-      width: 100%;
-      height: 100%;
-      box-sizing: border-box;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
+		/* ========================= */
+		/* ENTRY OVERLAY */
+		/* ========================= */
 
-    .guestbook-topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
+		#entry-overlay {
+			position: fixed;
+			inset: 0;
+			z-index: 20;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 20px;
+			box-sizing: border-box;
+			background: rgba(17, 17, 17, 0.82);
+			backdrop-filter: blur(4px);
+		}
 
-    .guestbook-title {
-      font-size: clamp(24px, 3vw, 40px);
-      font-weight: 700;
-      letter-spacing: 0.02em;
-    }
+		#entry-panel {
+			width: min(92vw, 420px);
+			background: rgba(30, 30, 30, 0.88);
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			padding: 18px;
+			box-sizing: border-box;
+			color: white;
+		}
 
-    #closeGuestbook {
-      appearance: none;
-      border: 1px solid white;
-      background: white;
-      color: black;
-      padding: 10px 16px;
-      font-size: 14px;
-      cursor: pointer;
-    }
+		#entry-title {
+			font-size: clamp(28px, 6vw, 42px);
+			line-height: 1;
+			margin: 0 0 8px 0;
+			text-align: center;
+		}
 
-    #entries {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      align-content: start;
-      overflow: hidden;
-    }
+		#entry-subtitle {
+			font-size: 13px;
+			opacity: 0.8;
+			text-align: center;
+			margin-bottom: 16px;
+		}
 
-    .entry {
-      border: 1px solid rgba(255,255,255,0.35);
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      min-height: 0;
-      background: rgba(255,255,255,0.03);
-    }
+		.entry-field {
+			width: 100%;
+			box-sizing: border-box;
+			margin-bottom: 10px;
+		}
 
-    .entry img {
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      object-fit: cover;
-      display: block;
-      background: #111;
-    }
+		#name-input,
+		#pick-image-button,
+		#start-button {
+			width: 100%;
+			min-height: 48px;
+			box-sizing: border-box;
+			border: 1px solid rgba(255,255,255,0.15);
+			background: rgba(0,0,0,0.25);
+			color: white;
+			padding: 12px;
+			font-size: 16px;
+			border-radius: 0;
+			outline: none;
+		}
 
-    .entry-name {
-      font-size: 18px;
-      font-weight: 700;
-      line-height: 1.1;
-      word-break: break-word;
-    }
+		#name-input::placeholder {
+			color: rgba(255,255,255,0.45);
+		}
 
-    .entry-date {
-      font-size: 13px;
-      opacity: 0.8;
-      line-height: 1.3;
-    }
+		#pick-image-button,
+		#start-button {
+			cursor: pointer;
+		}
 
-    .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      padding-top: 4px;
-    }
+		#start-button:disabled {
+			opacity: 0.45;
+			cursor: default;
+		}
 
-    .pagination button {
-      appearance: none;
-      border: 1px solid white;
-      background: transparent;
-      color: white;
-      padding: 8px 14px;
-      font-size: 14px;
-      cursor: pointer;
-    }
+		#file-name {
+			font-size: 13px;
+			opacity: 0.9;
+			margin: 0 0 10px 0;
+			min-height: 18px;
+			word-break: break-word;
+		}
 
-    .pagination button:disabled {
-      opacity: 0.3;
-      cursor: default;
-    }
+		#facecam-row {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			font-size: 14px;
+			margin-bottom: 12px;
+		}
 
-    #pageLabel {
-      min-width: 110px;
-      text-align: center;
-      font-size: 14px;
-    }
+		#preview-wrap {
+			width: 100%;
+			aspect-ratio: 1 / 1;
+			background: rgba(255,255,255,0.04);
+			border: 1px solid rgba(255,255,255,0.08);
+			margin-bottom: 12px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			overflow: hidden;
+		}
 
-    #guestbookStatus {
-      text-align: center;
-      font-size: 14px;
-      opacity: 0.75;
-      min-height: 18px;
-    }
+		#preview-image {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: none;
+		}
 
-    @media (max-width: 900px) {
-      .guestbook-container {
-        padding: 16px;
-      }
+		#status-text {
+			font-size: 13px;
+			min-height: 18px;
+			opacity: 0.9;
+			margin-top: 10px;
+		}
 
-      #entries {
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
+		/* ========================= */
+		/* GUESTBOOK OVERLAY */
+		/* ========================= */
 
-      .entry-name {
-        font-size: 15px;
-      }
+		#guestbook {
+			position: fixed;
+			inset: 0;
+			display: none;
+			z-index: 9999;
+			background: rgba(0, 0, 0, 0.96);
+			color: white;
+			overflow: hidden;
+		}
 
-      .entry-date {
-        font-size: 12px;
-      }
-    }
+		.guestbook-container {
+			width: 100%;
+			height: 100%;
+			box-sizing: border-box;
+			padding: 24px;
+			display: flex;
+			flex-direction: column;
+			gap: 16px;
+		}
 
-    @media (max-width: 640px) {
-      #entries {
-        grid-template-columns: 1fr 1fr;
-      }
+		.guestbook-topbar {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 12px;
+		}
 
-      .guestbook-title {
-        font-size: 24px;
-      }
-    }
-  </style>
+		.guestbook-title {
+			font-size: clamp(24px, 3vw, 40px);
+			font-weight: 700;
+			letter-spacing: 0.02em;
+		}
+
+		#closeGuestbook {
+			appearance: none;
+			border: 1px solid white;
+			background: white;
+			color: black;
+			padding: 10px 16px;
+			font-size: 14px;
+			cursor: pointer;
+		}
+
+		#entries {
+			flex: 1;
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 18px;
+			align-content: start;
+			overflow: hidden;
+		}
+
+		.entry {
+			border: 1px solid rgba(255,255,255,0.35);
+			padding: 12px;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			min-height: 0;
+			background: rgba(255,255,255,0.03);
+		}
+
+		.entry img {
+			width: 100%;
+			aspect-ratio: 1 / 1;
+			object-fit: cover;
+			display: block;
+			background: #111;
+		}
+
+		.entry-name {
+			font-size: 18px;
+			font-weight: 700;
+			line-height: 1.1;
+			word-break: break-word;
+		}
+
+		.entry-date {
+			font-size: 13px;
+			opacity: 0.8;
+			line-height: 1.3;
+		}
+
+		.pagination {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 12px;
+			padding-top: 4px;
+		}
+
+		.pagination button {
+			appearance: none;
+			border: 1px solid white;
+			background: transparent;
+			color: white;
+			padding: 8px 14px;
+			font-size: 14px;
+			cursor: pointer;
+		}
+
+		.pagination button:disabled {
+			opacity: 0.3;
+			cursor: default;
+		}
+
+		#pageLabel {
+			min-width: 110px;
+			text-align: center;
+			font-size: 14px;
+		}
+
+		#guestbookStatus {
+			text-align: center;
+			font-size: 14px;
+			opacity: 0.75;
+			min-height: 18px;
+		}
+
+		@media (max-width: 900px) {
+			.guestbook-container {
+				padding: 16px;
+			}
+
+			#entries {
+				grid-template-columns: 1fr 1fr;
+				gap: 12px;
+			}
+
+			.entry-name {
+				font-size: 15px;
+			}
+
+			.entry-date {
+				font-size: 12px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			#entries {
+				grid-template-columns: 1fr 1fr;
+			}
+
+			.guestbook-title {
+				font-size: 24px;
+			}
+		}
+	</style>
 </head>
 <body>
-  <iframe
-    id="godotFrame"
-    src="./godot/index.html"
-    allow="camera; microphone; autoplay; fullscreen"
-  ></iframe>
+	<div id="entry-overlay">
+		<div id="entry-panel">
+			<h1 id="entry-title">choose your shirt</h1>
+			<div id="entry-subtitle">build v15 guestbook-direct</div>
 
-  <div id="guestbook">
-    <div class="guestbook-container">
-      <div class="guestbook-topbar">
-        <div class="guestbook-title">Guestbook</div>
-        <button id="closeGuestbook" type="button">Close</button>
-      </div>
+			<input
+				id="name-input"
+				class="entry-field"
+				type="text"
+				placeholder="enter name"
+				autocomplete="off"
+				autocapitalize="none"
+				autocorrect="off"
+				spellcheck="false"
+			/>
 
-      <div id="entries"></div>
+			<div id="preview-wrap">
+				<img id="preview-image" alt="shirt preview" />
+			</div>
 
-      <div class="pagination">
-        <button id="prevPage" type="button">Prev</button>
-        <span id="pageLabel">Page 1 / 1</span>
-        <button id="nextPage" type="button">Next</button>
-      </div>
+			<div id="file-name">no image selected</div>
 
-      <div id="guestbookStatus"></div>
-    </div>
-  </div>
+			<button id="pick-image-button" class="entry-field" type="button">select image</button>
 
-  <script>
-    const GUESTBOOK_API_BASE = "https://dream-chatroom.onrender.com";
+			<label id="facecam-row">
+				<input id="facecam-checkbox" type="checkbox" />
+				<span>enable facecam</span>
+			</label>
 
-    let currentPage = 1;
-    let totalPages = 1;
-    window.lastMessage = "";
+			<button id="start-button" class="entry-field" type="button">enter world</button>
 
-    function formatJoinedAt(timestamp) {
-      const date = new Date(timestamp);
-      return date.toLocaleString();
-    }
+			<div id="status-text">enter a name and select an image</div>
+		</div>
+	</div>
 
-    function setGuestbookStatus(text) {
-      document.getElementById("guestbookStatus").textContent = text || "";
-    }
+	<div id="guestbook">
+		<div class="guestbook-container">
+			<div class="guestbook-topbar">
+				<div class="guestbook-title">Guestbook</div>
+				<button id="closeGuestbook" type="button">Close</button>
+			</div>
 
-    function renderGuestbookEntries(data) {
-      const container = document.getElementById("entries");
-      container.innerHTML = "";
+			<div id="entries"></div>
 
-      if (!data.entries || data.entries.length === 0) {
-        setGuestbookStatus("No entries yet.");
-      } else {
-        setGuestbookStatus("");
-      }
+			<div class="pagination">
+				<button id="prevPage" type="button">Prev</button>
+				<span id="pageLabel">Page 1 / 1</span>
+				<button id="nextPage" type="button">Next</button>
+			</div>
 
-      for (const entry of data.entries) {
-        const div = document.createElement("div");
-        div.className = "entry";
+			<div id="guestbookStatus"></div>
+		</div>
+	</div>
 
-        div.innerHTML = `
-          <img src="${entry.shirt_url}" alt="${entry.name}" loading="lazy">
-          <div class="entry-name">${entry.name}</div>
-          <div class="entry-date">${formatJoinedAt(entry.joined_at)}</div>
-        `;
+	<input id="godot-image-input" type="file" accept="image/*" />
 
-        container.appendChild(div);
-      }
+	<canvas id="canvas">
+		Your browser does not support the canvas tag.
+	</canvas>
 
-      while (container.children.length < 8) {
-        const filler = document.createElement("div");
-        filler.className = "entry";
-        filler.style.visibility = "hidden";
-        container.appendChild(filler);
-      }
-    }
+	<video id="godot-face-video" autoplay playsinline muted></video>
+	<canvas id="godot-face-canvas"></canvas>
+	<canvas id="image-convert-canvas"></canvas>
 
-    function updatePaginationUI() {
-      document.getElementById("pageLabel").textContent = `Page ${currentPage} / ${totalPages}`;
-      document.getElementById("prevPage").disabled = currentPage <= 1;
-      document.getElementById("nextPage").disabled = currentPage >= totalPages;
-    }
+	<script>
+		const BUILD_TAG = "v15-guestbook-direct";
+		const GUESTBOOK_API_BASE = "https://dream-chatroom.onrender.com";
 
-    async function loadGuestbook(page = 1) {
-      try {
-        setGuestbookStatus("Loading...");
-        const res = await fetch(`${GUESTBOOK_API_BASE}/api/guestbook?page=${page}`, {
-          cache: "no-store"
-        });
+		const overlay = document.getElementById("entry-overlay");
+		const nameInput = document.getElementById("name-input");
+		const pickImageButton = document.getElementById("pick-image-button");
+		const startButton = document.getElementById("start-button");
+		const facecamCheckbox = document.getElementById("facecam-checkbox");
+		const fileName = document.getElementById("file-name");
+		const statusText = document.getElementById("status-text");
+		const previewImage = document.getElementById("preview-image");
 
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
+		const godotImageInput = document.getElementById("godot-image-input");
+		const godotFaceVideo = document.getElementById("godot-face-video");
+		const godotFaceCanvas = document.getElementById("godot-face-canvas");
+		const godotFaceCtx = godotFaceCanvas.getContext("2d", { willReadFrequently: true });
+		const imageConvertCanvas = document.getElementById("image-convert-canvas");
+		const imageConvertCtx = imageConvertCanvas.getContext("2d");
 
-        const data = await res.json();
+		let godotFaceStream = null;
+		let godotFaceSize = 80;
+		let selectedImageDataUrl = "";
+		let selectedImageName = "";
 
-        currentPage = Number(data.page || 1);
-        totalPages = Math.max(1, Number(data.total_pages || 1));
+		let currentPage = 1;
+		let totalPages = 1;
+		window.lastMessage = "";
 
-        renderGuestbookEntries(data);
-        updatePaginationUI();
-      } catch (err) {
-        console.error("Guestbook fetch failed:", err);
-        document.getElementById("entries").innerHTML = "";
-        setGuestbookStatus("Could not load guestbook.");
-        currentPage = 1;
-        totalPages = 1;
-        updatePaginationUI();
-      }
-    }
+		function updateStartState() {
+			const hasName = nameInput.value.trim().length > 0;
+			const hasImage = selectedImageDataUrl !== "";
 
-    function showGuestbook() {
-      const guestbook = document.getElementById("guestbook");
-      guestbook.style.display = "block";
-      window.lastMessage = "";
-      loadGuestbook(1);
-    }
+			startButton.disabled = !(hasName && hasImage);
 
-    function hideGuestbook() {
-      document.getElementById("guestbook").style.display = "none";
-      window.lastMessage = "guestbook_closed";
-    }
+			if (hasName && hasImage) {
+				statusText.textContent = "ready";
+			} else if (!hasName && !hasImage) {
+				statusText.textContent = "enter a name and select an image";
+			} else if (!hasName) {
+				statusText.textContent = "enter a name";
+			} else {
+				statusText.textContent = "select an image";
+			}
+		}
 
-    window.showGuestbook = showGuestbook;
-    window.hideGuestbook = hideGuestbook;
+		async function convertFileToJpegDataUrl(file) {
+			return new Promise((resolve, reject) => {
+				const objectUrl = URL.createObjectURL(file);
+				const img = new Image();
 
-    document.getElementById("closeGuestbook").addEventListener("click", hideGuestbook);
+				img.onload = () => {
+					try {
+						const maxSize = 128;
+						imageConvertCanvas.width = maxSize;
+						imageConvertCanvas.height = maxSize;
 
-    document.getElementById("prevPage").addEventListener("click", () => {
-      if (currentPage > 1) {
-        loadGuestbook(currentPage - 1);
-      }
-    });
+						imageConvertCtx.clearRect(0, 0, maxSize, maxSize);
 
-    document.getElementById("nextPage").addEventListener("click", () => {
-      if (currentPage < totalPages) {
-        loadGuestbook(currentPage + 1);
-      }
-    });
+						const srcW = img.naturalWidth || img.width;
+						const srcH = img.naturalHeight || img.height;
+						const square = Math.min(srcW, srcH);
+						const sx = Math.floor((srcW - square) * 0.5);
+						const sy = Math.floor((srcH - square) * 0.5);
 
-    updatePaginationUI();
-  </script>
+						imageConvertCtx.drawImage(
+							img,
+							sx, sy, square, square,
+							0, 0, maxSize, maxSize
+						);
+
+						const jpegDataUrl = imageConvertCanvas.toDataURL("image/jpeg", 0.72);
+						URL.revokeObjectURL(objectUrl);
+						resolve(jpegDataUrl);
+					} catch (err) {
+						URL.revokeObjectURL(objectUrl);
+						reject(err);
+					}
+				};
+
+				img.onerror = (err) => {
+					URL.revokeObjectURL(objectUrl);
+					reject(err);
+				};
+
+				img.src = objectUrl;
+			});
+		}
+
+		function formatJoinedAt(timestamp) {
+			const date = new Date(timestamp);
+			return date.toLocaleString();
+		}
+
+		function setGuestbookStatus(text) {
+			document.getElementById("guestbookStatus").textContent = text || "";
+		}
+
+		function renderGuestbookEntries(data) {
+			const container = document.getElementById("entries");
+			container.innerHTML = "";
+
+			if (!data.entries || data.entries.length === 0) {
+				setGuestbookStatus("No entries yet.");
+			} else {
+				setGuestbookStatus("");
+			}
+
+			for (const entry of data.entries) {
+				const div = document.createElement("div");
+				div.className = "entry";
+
+				div.innerHTML = `
+					<img src="${entry.shirt_url}" alt="${entry.name}" loading="lazy">
+					<div class="entry-name">${entry.name}</div>
+					<div class="entry-date">${formatJoinedAt(entry.joined_at)}</div>
+				`;
+
+				container.appendChild(div);
+			}
+
+			while (container.children.length < 8) {
+				const filler = document.createElement("div");
+				filler.className = "entry";
+				filler.style.visibility = "hidden";
+				container.appendChild(filler);
+			}
+		}
+
+		function updatePaginationUI() {
+			document.getElementById("pageLabel").textContent = `Page ${currentPage} / ${totalPages}`;
+			document.getElementById("prevPage").disabled = currentPage <= 1;
+			document.getElementById("nextPage").disabled = currentPage >= totalPages;
+		}
+
+		async function loadGuestbook(page = 1) {
+			try {
+				setGuestbookStatus("Loading...");
+				const res = await fetch(`${GUESTBOOK_API_BASE}/api/guestbook?page=${page}`, {
+					cache: "no-store"
+				});
+
+				if (!res.ok) {
+					throw new Error(`HTTP ${res.status}`);
+				}
+
+				const data = await res.json();
+
+				currentPage = Number(data.page || 1);
+				totalPages = Math.max(1, Number(data.total_pages || 1));
+
+				renderGuestbookEntries(data);
+				updatePaginationUI();
+			} catch (err) {
+				console.error("Guestbook fetch failed:", err);
+				document.getElementById("entries").innerHTML = "";
+				setGuestbookStatus("Could not load guestbook.");
+				currentPage = 1;
+				totalPages = 1;
+				updatePaginationUI();
+			}
+		}
+
+		function showGuestbook() {
+			document.getElementById("guestbook").style.display = "block";
+			window.lastMessage = "";
+			loadGuestbook(1);
+		}
+
+		function hideGuestbook() {
+			document.getElementById("guestbook").style.display = "none";
+			window.lastMessage = "guestbook_closed";
+		}
+
+		window.showGuestbook = showGuestbook;
+		window.hideGuestbook = hideGuestbook;
+
+		window.openGodotImagePicker = function () {
+			godotImageInput.value = "";
+			godotImageInput.click();
+		};
+
+		pickImageButton.addEventListener("click", function () {
+			window.openGodotImagePicker();
+		});
+
+		godotImageInput.addEventListener("change", async function () {
+			const file = godotImageInput.files && godotImageInput.files[0];
+			if (!file) return;
+
+			try {
+				const jpegDataUrl = await convertFileToJpegDataUrl(file);
+
+				selectedImageDataUrl = jpegDataUrl;
+				selectedImageName = file.name || "image.jpg";
+
+				fileName.textContent = selectedImageName;
+				previewImage.src = selectedImageDataUrl;
+				previewImage.style.display = "block";
+
+				updateStartState();
+			} catch (err) {
+				console.error("[dreambox]", BUILD_TAG, "Image conversion failed:", err);
+				selectedImageDataUrl = "";
+				selectedImageName = "";
+				fileName.textContent = "no image selected";
+				previewImage.src = "";
+				previewImage.style.display = "none";
+				statusText.textContent = "could not load image";
+				updateStartState();
+			}
+		});
+
+		nameInput.addEventListener("input", updateStartState);
+
+		function invokeGodotStart() {
+			const name = nameInput.value.trim();
+			if (!name || !selectedImageDataUrl) {
+				updateStartState();
+				return;
+			}
+
+			if (window.godotWebStart) {
+				window.godotWebStart(name, selectedImageDataUrl, facecamCheckbox.checked);
+				overlay.style.display = "none";
+			}
+		}
+
+		startButton.addEventListener("click", invokeGodotStart);
+
+		window.startGodotFacecam = async function (width, height) {
+			try {
+				godotFaceSize = Math.max(32, width || 80);
+
+				if (godotFaceStream) {
+					godotFaceStream.getTracks().forEach(track => track.stop());
+					godotFaceStream = null;
+				}
+
+				const stream = await navigator.mediaDevices.getUserMedia({
+					video: {
+						facingMode: "user",
+						width: { ideal: 192 },
+						height: { ideal: 192 },
+						frameRate: { ideal: 8, max: 12 }
+					},
+					audio: false
+				});
+
+				godotFaceStream = stream;
+				godotFaceVideo.srcObject = stream;
+				await godotFaceVideo.play();
+
+				godotFaceCanvas.width = godotFaceSize;
+				godotFaceCanvas.height = godotFaceSize;
+			} catch (err) {
+				console.error("[dreambox]", BUILD_TAG, "Godot facecam failed:", err);
+			}
+		};
+
+		window.captureGodotFacecamFrame = function () {
+			if (!godotFaceVideo || !godotFaceStream) return "";
+			if (godotFaceVideo.videoWidth === 0 || godotFaceVideo.videoHeight === 0) return "";
+
+			const vw = godotFaceVideo.videoWidth;
+			const vh = godotFaceVideo.videoHeight;
+			const square = Math.min(vw, vh);
+			const sx = Math.floor((vw - square) * 0.5);
+			const sy = Math.floor((vh - square) * 0.5);
+
+			godotFaceCtx.clearRect(0, 0, godotFaceSize, godotFaceSize);
+			godotFaceCtx.drawImage(
+				godotFaceVideo,
+				sx, sy, square, square,
+				0, 0, godotFaceSize, godotFaceSize
+			);
+
+			return godotFaceCanvas.toDataURL("image/jpeg", 0.45);
+		};
+
+		window.stopGodotFacecam = function () {
+			if (godotFaceStream) {
+				godotFaceStream.getTracks().forEach(track => track.stop());
+				godotFaceStream = null;
+			}
+
+			if (godotFaceVideo) {
+				godotFaceVideo.srcObject = null;
+			}
+		};
+
+		document.getElementById("closeGuestbook").addEventListener("click", hideGuestbook);
+
+		document.getElementById("prevPage").addEventListener("click", () => {
+			if (currentPage > 1) {
+				loadGuestbook(currentPage - 1);
+			}
+		});
+
+		document.getElementById("nextPage").addEventListener("click", () => {
+			if (currentPage < totalPages) {
+				loadGuestbook(currentPage + 1);
+			}
+		});
+
+		updateStartState();
+		updatePaginationUI();
+
+		(function () {
+			function patchAudioWorklet(ContextClass) {
+				if (!ContextClass || !ContextClass.prototype) return;
+
+				const proto = ContextClass.prototype;
+
+				if (!("audioWorklet" in proto)) {
+					Object.defineProperty(proto, "audioWorklet", {
+						configurable: true,
+						get() {
+							return {
+								addModule: async function () {
+									return Promise.resolve();
+								}
+							};
+						}
+					});
+				}
+			}
+
+			patchAudioWorklet(window.AudioContext);
+			patchAudioWorklet(window.webkitAudioContext);
+
+			if (typeof window.AudioWorkletNode === "undefined") {
+				window.AudioWorkletNode = class AudioWorkletNode {
+					constructor() {}
+					connect() { return this; }
+					disconnect() {}
+					port = { postMessage() {}, onmessage: null };
+				};
+			}
+
+			if (typeof window.AudioWorkletProcessor === "undefined") {
+				window.AudioWorkletProcessor = class AudioWorkletProcessor {
+					constructor() {
+						this.port = { postMessage() {}, onmessage: null };
+					}
+					process() { return true; }
+				};
+			}
+
+			if (typeof window.registerProcessor === "undefined") {
+				window.registerProcessor = function () {};
+			}
+		})();
+	</script>
+
+	<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+
+
+	<script src="index.js?v=15"></script>
+	<script>
+		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1608140,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+		engine.startGame({
+			canvas: document.getElementById("canvas")
+		});
+	</script>
 </body>
 </html>
