@@ -1,13 +1,20 @@
-# Godot
 .godot/
 .import/
+export.cfg
 export_presets.cfg
+*.import
 
-# Mac
+# Optional: ignore generated binary resources (safe to rebuild)
+*.mesh
+*.scn
+*.res
+
+*.autosave.map
+
 .DS_Store
 
-# Node
 node_modules/
 
-# Build output
 web_build/
+
+*.log
