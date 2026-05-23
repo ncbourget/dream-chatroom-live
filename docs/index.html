@@ -104,7 +104,8 @@
 
 		#name-input,
 		#pick-image-button,
-		#start-button {
+		#start-button,
+		#mic-select {
 			width: 100%;
 			min-height: 48px;
 			box-sizing: border-box;
@@ -143,6 +144,14 @@
 			display: flex;
 			align-items: center;
 			gap: 8px;
+			font-size: 14px;
+			margin-bottom: 12px;
+		}
+
+		#mic-row {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
 			font-size: 14px;
 			margin-bottom: 12px;
 		}
@@ -362,6 +371,13 @@
 				<span>enable facecam</span>
 			</label>
 
+			<label id="mic-row">
+				<span>microphone</span>
+				<select id="mic-select">
+					<option value="">detecting microphones...</option>
+				</select>
+			</label>
+
 			<button id="start-button" class="entry-field" type="button">enter world</button>
 
 			<div id="status-text">enter a name and select an image</div>
@@ -398,7 +414,7 @@
 	<canvas id="image-convert-canvas"></canvas>
 
 	<script>
-		const BUILD_TAG = "v19-proximity-voice";
+		const BUILD_TAG = "v20-proximity-voice-mic-select";
 		const GUESTBOOK_API_BASE = "https://dream-chatroom.onrender.com";
 
 		const overlay = document.getElementById("entry-overlay");
@@ -406,6 +422,7 @@
 		const pickImageButton = document.getElementById("pick-image-button");
 		const startButton = document.getElementById("start-button");
 		const facecamCheckbox = document.getElementById("facecam-checkbox");
+		const micSelect = document.getElementById("mic-select");
 		const fileName = document.getElementById("file-name");
 		const statusText = document.getElementById("status-text");
 		const previewImage = document.getElementById("preview-image");
@@ -426,6 +443,7 @@
 		let totalPages = 1;
 		window.lastMessage = "";
 
+		let selectedMicDeviceId = "";
 		let godotVoiceAudioContext = null;
 		let godotVoiceStream = null;
 		let godotVoiceRecorder = null;
@@ -680,8 +698,68 @@
 			return true;
 		}
 
+		async function populateMicrophoneSelect() {
+			if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+				micSelect.innerHTML = "";
+				const option = document.createElement("option");
+				option.value = "__none__";
+				option.textContent = "no microphone";
+				micSelect.appendChild(option);
+				selectedMicDeviceId = "__none__";
+				return;
+			}
+
+			try {
+				const currentValue = micSelect.value;
+				const devices = await navigator.mediaDevices.enumerateDevices();
+				const microphones = devices.filter(device => device.kind === "audioinput");
+
+				micSelect.innerHTML = "";
+
+				const noneOption = document.createElement("option");
+				noneOption.value = "__none__";
+				noneOption.textContent = "no microphone";
+				micSelect.appendChild(noneOption);
+
+				for (let i = 0; i < microphones.length; i++) {
+					const device = microphones[i];
+					const option = document.createElement("option");
+					option.value = device.deviceId;
+					option.textContent = device.label || `microphone ${i + 1}`;
+					micSelect.appendChild(option);
+				}
+
+				if (currentValue && Array.from(micSelect.options).some(option => option.value === currentValue)) {
+					selectedMicDeviceId = currentValue;
+					micSelect.value = currentValue;
+				} else if (microphones.length > 0) {
+					selectedMicDeviceId = microphones[0].deviceId;
+					micSelect.value = selectedMicDeviceId;
+				} else {
+					selectedMicDeviceId = "__none__";
+					micSelect.value = "__none__";
+				}
+			} catch (err) {
+				micSelect.innerHTML = "";
+				const option = document.createElement("option");
+				option.value = "__none__";
+				option.textContent = "no microphone";
+				micSelect.appendChild(option);
+				selectedMicDeviceId = "__none__";
+			}
+		}
+
+		micSelect.addEventListener("change", function () {
+			selectedMicDeviceId = micSelect.value;
+		});
+
 		async function startGodotVoiceChat() {
 			if (godotVoiceEnabled) {
+				return true;
+			}
+
+			if (selectedMicDeviceId === "__none__") {
+				godotVoiceEnabled = false;
 				return true;
 			}
 
@@ -703,15 +781,30 @@
 					godotVoiceStream = null;
 				}
 
+				const audioSettings = {
+					echoCancellation: true,
+					noiseSuppression: true,
+					autoGainControl: true,
+					channelCount: 1
+				};
+
+				if (selectedMicDeviceId && selectedMicDeviceId !== "__none__") {
+					audioSettings.deviceId = { exact: selectedMicDeviceId };
+				}
+
 				godotVoiceStream = await navigator.mediaDevices.getUserMedia({
-					audio: {
-						echoCancellation: true,
-						noiseSuppression: true,
-						autoGainControl: true,
-						channelCount: 1
-					},
+					audio: audioSettings,
 					video: false
 				});
+
+				await populateMicrophoneSelect();
+
+				const activeTrack = godotVoiceStream.getAudioTracks()[0];
+
+				if (activeTrack && activeTrack.getSettings().deviceId) {
+					selectedMicDeviceId = activeTrack.getSettings().deviceId;
+					micSelect.value = selectedMicDeviceId;
+				}
 
 				const mimeType = getSupportedVoiceMimeType();
 				const options = mimeType === "" ? {} : { mimeType: mimeType };
@@ -725,8 +818,10 @@
 
 					try {
 						const dataUrl = await blobToDataUrl(event.data);
+
 						if (dataUrl !== "") {
 							godotVoiceOutgoingPackets.push(dataUrl);
+
 							if (godotVoiceOutgoingPackets.length > 12) {
 								godotVoiceOutgoingPackets.shift();
 							}
@@ -797,26 +892,26 @@
 			}
 
 			const volume = getPeerVolume(peerId);
+
 			if (volume <= 0.001) {
 				return;
 			}
 
-			let audio = godotVoiceAudios[peerId];
-
-			if (!audio) {
-				audio = new Audio();
-				audio.autoplay = true;
-				audio.playsInline = true;
-				godotVoiceAudios[peerId] = audio;
-			}
-
+			const audio = new Audio();
+			audio.autoplay = true;
+			audio.playsInline = true;
 			audio.volume = Math.min(1.0, Math.max(0.0, volume));
 			audio.src = packet;
 
 			const playPromise = audio.play();
+
 			if (playPromise && typeof playPromise.catch === "function") {
 				playPromise.catch(() => {});
 			}
+
+			setTimeout(() => {
+				audio.src = "";
+			}, 3000);
 		}
 
 		window.startGodotVoiceChat = startGodotVoiceChat;
@@ -843,6 +938,7 @@
 
 			try {
 				const parsed = JSON.parse(String(positionsJson || "{}"));
+
 				if (parsed && typeof parsed === "object") {
 					godotVoicePositions = parsed;
 				}
@@ -859,13 +955,17 @@
 
 		async function invokeGodotStart() {
 			const name = nameInput.value.trim();
+
 			if (!name || !selectedImageDataUrl) {
 				updateStartState();
 				return;
 			}
 
 			await unlockVoiceAudio();
-			await startGodotVoiceChat();
+
+			if (selectedMicDeviceId !== "__none__") {
+				await startGodotVoiceChat();
+			}
 
 			if (window.godotWebStart) {
 				window.godotWebStart(name, selectedImageDataUrl, facecamCheckbox.checked);
@@ -952,6 +1052,11 @@
 
 		updateStartState();
 		updatePaginationUI();
+		populateMicrophoneSelect();
+
+		if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+			navigator.mediaDevices.addEventListener("devicechange", populateMicrophoneSelect);
+		}
 
 		(function () {
 			function patchAudioWorklet(ContextClass) {
@@ -1004,9 +1109,9 @@
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 
 
-	<script src="index.js?v=19"></script>
+	<script src="index.js?v=20"></script>
 	<script>
-		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":14518856,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":14519000,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
 		engine.startGame({
 			canvas: document.getElementById("canvas")
 		});
