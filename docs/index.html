@@ -35,10 +35,6 @@
 			display: none;
 		}
 
-		/* ========================= */
-		/* SHARED PANEL OVERLAY FEEL */
-		/* ========================= */
-
 		.overlay-backdrop {
 			position: fixed;
 			inset: 0;
@@ -63,10 +59,6 @@
 			overflow-y: auto;
 			overflow-x: hidden;
 		}
-
-		/* ========================= */
-		/* ENTRY OVERLAY */
-		/* ========================= */
 
 		#entry-overlay {
 			position: fixed;
@@ -181,10 +173,6 @@
 			opacity: 0.9;
 			margin-top: 10px;
 		}
-
-		/* ========================= */
-		/* GUESTBOOK OVERLAY */
-		/* ========================= */
 
 		#guestbook {
 			position: fixed;
@@ -347,8 +335,8 @@
 <body>
 	<div id="entry-overlay">
 		<div id="entry-panel">
-			<h1 id="entry-title">choose your shirt</h1>
-			<div id="entry-subtitle">build v18 guestbook-panel-match</div>
+			<h1 id="entry-title">Dream Chatroom</h1>
+			<div id="entry-subtitle">choose name, shirt and webcam access</div>
 
 			<input
 				id="name-input"
@@ -410,7 +398,7 @@
 	<canvas id="image-convert-canvas"></canvas>
 
 	<script>
-		const BUILD_TAG = "v18-guestbook-panel-match";
+		const BUILD_TAG = "v19-proximity-voice";
 		const GUESTBOOK_API_BASE = "https://dream-chatroom.onrender.com";
 
 		const overlay = document.getElementById("entry-overlay");
@@ -437,6 +425,18 @@
 		let currentPage = 1;
 		let totalPages = 1;
 		window.lastMessage = "";
+
+		let godotVoiceAudioContext = null;
+		let godotVoiceStream = null;
+		let godotVoiceRecorder = null;
+		let godotVoiceOutgoingPackets = [];
+		let godotVoicePositions = {};
+		let godotVoiceLocalId = "";
+		let godotVoiceAudios = {};
+		let godotVoiceEnabled = false;
+		let godotVoiceMaxDistance = 15.0;
+		let godotVoiceMinDistance = 2.0;
+		let godotVoiceBaseVolume = 1.0;
 
 		function updateStartState() {
 			const hasName = nameInput.value.trim().length > 0;
@@ -507,6 +507,15 @@
 			document.getElementById("guestbookStatus").textContent = text || "";
 		}
 
+		function escapeHtml(value) {
+			return String(value)
+				.replaceAll("&", "&amp;")
+				.replaceAll("<", "&lt;")
+				.replaceAll(">", "&gt;")
+				.replaceAll('"', "&quot;")
+				.replaceAll("'", "&#039;");
+		}
+
 		function renderGuestbookEntries(data) {
 			const container = document.getElementById("entries");
 			container.innerHTML = "";
@@ -523,10 +532,10 @@
 
 				div.innerHTML = `
 					<div class="entry-thumb">
-						<img src="${entry.shirt_url}" alt="${entry.name}" loading="lazy">
+						<img src="${escapeHtml(entry.shirt_url)}" alt="${escapeHtml(entry.name)}" loading="lazy">
 					</div>
-					<div class="entry-name">${entry.name}</div>
-					<div class="entry-date">${formatJoinedAt(entry.joined_at)}</div>
+					<div class="entry-name">${escapeHtml(entry.name)}</div>
+					<div class="entry-date">${escapeHtml(formatJoinedAt(entry.joined_at))}</div>
 				`;
 
 				container.appendChild(div);
@@ -619,12 +628,244 @@
 
 		nameInput.addEventListener("input", updateStartState);
 
-		function invokeGodotStart() {
+		function getSupportedVoiceMimeType() {
+			const types = [
+				"audio/webm;codecs=opus",
+				"audio/webm",
+				"audio/mp4",
+				"audio/aac"
+			];
+
+			if (typeof MediaRecorder === "undefined") {
+				return "";
+			}
+
+			for (const type of types) {
+				if (MediaRecorder.isTypeSupported(type)) {
+					return type;
+				}
+			}
+
+			return "";
+		}
+
+		function blobToDataUrl(blob) {
+			return new Promise((resolve, reject) => {
+				const reader = new FileReader();
+
+				reader.onloadend = () => {
+					resolve(String(reader.result || ""));
+				};
+
+				reader.onerror = reject;
+				reader.readAsDataURL(blob);
+			});
+		}
+
+		async function unlockVoiceAudio() {
+			const ContextClass = window.AudioContext || window.webkitAudioContext;
+
+			if (!ContextClass) {
+				return false;
+			}
+
+			if (!godotVoiceAudioContext) {
+				godotVoiceAudioContext = new ContextClass();
+			}
+
+			if (godotVoiceAudioContext.state === "suspended") {
+				await godotVoiceAudioContext.resume();
+			}
+
+			return true;
+		}
+
+		async function startGodotVoiceChat() {
+			if (godotVoiceEnabled) {
+				return true;
+			}
+
+			if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+				statusText.textContent = "microphone unavailable";
+				return false;
+			}
+
+			if (typeof MediaRecorder === "undefined") {
+				statusText.textContent = "voice chat unavailable in this browser";
+				return false;
+			}
+
+			try {
+				await unlockVoiceAudio();
+
+				if (godotVoiceStream) {
+					godotVoiceStream.getTracks().forEach(track => track.stop());
+					godotVoiceStream = null;
+				}
+
+				godotVoiceStream = await navigator.mediaDevices.getUserMedia({
+					audio: {
+						echoCancellation: true,
+						noiseSuppression: true,
+						autoGainControl: true,
+						channelCount: 1
+					},
+					video: false
+				});
+
+				const mimeType = getSupportedVoiceMimeType();
+				const options = mimeType === "" ? {} : { mimeType: mimeType };
+
+				godotVoiceRecorder = new MediaRecorder(godotVoiceStream, options);
+
+				godotVoiceRecorder.ondataavailable = async function (event) {
+					if (!event.data || event.data.size <= 0) {
+						return;
+					}
+
+					try {
+						const dataUrl = await blobToDataUrl(event.data);
+						if (dataUrl !== "") {
+							godotVoiceOutgoingPackets.push(dataUrl);
+							if (godotVoiceOutgoingPackets.length > 12) {
+								godotVoiceOutgoingPackets.shift();
+							}
+						}
+					} catch (err) {
+						console.error("[dreambox]", BUILD_TAG, "Voice packet encode failed:", err);
+					}
+				};
+
+				godotVoiceRecorder.start(160);
+				godotVoiceEnabled = true;
+				return true;
+			} catch (err) {
+				console.error("[dreambox]", BUILD_TAG, "Voice chat failed:", err);
+				statusText.textContent = "microphone blocked or unavailable";
+				return false;
+			}
+		}
+
+		function stopGodotVoiceChat() {
+			godotVoiceEnabled = false;
+
+			if (godotVoiceRecorder && godotVoiceRecorder.state !== "inactive") {
+				try {
+					godotVoiceRecorder.stop();
+				} catch (err) {}
+			}
+
+			godotVoiceRecorder = null;
+
+			if (godotVoiceStream) {
+				godotVoiceStream.getTracks().forEach(track => track.stop());
+				godotVoiceStream = null;
+			}
+
+			godotVoiceOutgoingPackets = [];
+		}
+
+		function getPeerVolume(peerId) {
+			const local = godotVoicePositions[godotVoiceLocalId];
+			const remote = godotVoicePositions[peerId];
+
+			if (!local || !remote) {
+				return godotVoiceBaseVolume;
+			}
+
+			const dx = Number(local.x || 0) - Number(remote.x || 0);
+			const dy = Number(local.y || 0) - Number(remote.y || 0);
+			const dz = Number(local.z || 0) - Number(remote.z || 0);
+			const distance = Math.sqrt((dx * dx) + (dy * dy) + (dz * dz));
+
+			if (distance <= godotVoiceMinDistance) {
+				return godotVoiceBaseVolume;
+			}
+
+			if (distance >= godotVoiceMaxDistance) {
+				return 0.0;
+			}
+
+			const t = (distance - godotVoiceMinDistance) / (godotVoiceMaxDistance - godotVoiceMinDistance);
+			const eased = 1.0 - Math.min(1.0, Math.max(0.0, t));
+			return eased * eased * godotVoiceBaseVolume;
+		}
+
+		function playGodotVoicePacket(peerId, packet) {
+			if (!packet || peerId === "" || peerId === godotVoiceLocalId) {
+				return;
+			}
+
+			const volume = getPeerVolume(peerId);
+			if (volume <= 0.001) {
+				return;
+			}
+
+			let audio = godotVoiceAudios[peerId];
+
+			if (!audio) {
+				audio = new Audio();
+				audio.autoplay = true;
+				audio.playsInline = true;
+				godotVoiceAudios[peerId] = audio;
+			}
+
+			audio.volume = Math.min(1.0, Math.max(0.0, volume));
+			audio.src = packet;
+
+			const playPromise = audio.play();
+			if (playPromise && typeof playPromise.catch === "function") {
+				playPromise.catch(() => {});
+			}
+		}
+
+		window.startGodotVoiceChat = startGodotVoiceChat;
+		window.stopGodotVoiceChat = stopGodotVoiceChat;
+
+		window.popGodotVoicePacket = function () {
+			if (godotVoiceOutgoingPackets.length === 0) {
+				return "";
+			}
+
+			return godotVoiceOutgoingPackets.shift();
+		};
+
+		window.playGodotVoicePacket = function (peerId, packet) {
+			playGodotVoicePacket(String(peerId || ""), String(packet || ""));
+		};
+
+		window.receiveGodotVoicePacket = function (peerId, packet) {
+			playGodotVoicePacket(String(peerId || ""), String(packet || ""));
+		};
+
+		window.setGodotVoicePositions = function (localId, positionsJson) {
+			godotVoiceLocalId = String(localId || "");
+
+			try {
+				const parsed = JSON.parse(String(positionsJson || "{}"));
+				if (parsed && typeof parsed === "object") {
+					godotVoicePositions = parsed;
+				}
+			} catch (err) {
+				godotVoicePositions = {};
+			}
+		};
+
+		window.setGodotVoiceConfig = function (minDistance, maxDistance, baseVolume) {
+			godotVoiceMinDistance = Number(minDistance || godotVoiceMinDistance);
+			godotVoiceMaxDistance = Number(maxDistance || godotVoiceMaxDistance);
+			godotVoiceBaseVolume = Number(baseVolume || godotVoiceBaseVolume);
+		};
+
+		async function invokeGodotStart() {
 			const name = nameInput.value.trim();
 			if (!name || !selectedImageDataUrl) {
 				updateStartState();
 				return;
 			}
+
+			await unlockVoiceAudio();
+			await startGodotVoiceChat();
 
 			if (window.godotWebStart) {
 				window.godotWebStart(name, selectedImageDataUrl, facecamCheckbox.checked);
@@ -763,9 +1004,9 @@
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 
 
-	<script src="index.js?v=18"></script>
+	<script src="index.js?v=19"></script>
 	<script>
-		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":14413348,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":14518856,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
 		engine.startGame({
 			canvas: document.getElementById("canvas")
 		});
