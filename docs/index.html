@@ -522,6 +522,10 @@
 			let godotVoiceEnabled = false;
 			let godotVoiceCapturedPacketCount = 0;
 			let godotVoicePlayedPacketCount = 0;
+			let godotVoiceNextPacketTime = 0;
+			let godotVoiceTargetSampleRate = 8000;
+			let godotVoicePacketIntervalSec = 0.12;
+			let godotVoiceSilenceThreshold = 0.012;
 			let godotVoiceMaxDistance = 15.0;
 			let godotVoiceMinDistance = 2.0;
 			let godotVoiceBaseVolume = 1.0;
@@ -902,7 +906,7 @@
 					}
 
 					godotVoiceSource = godotVoiceAudioContext.createMediaStreamSource(godotVoiceStream);
-					godotVoiceProcessor = godotVoiceAudioContext.createScriptProcessor(2048, 1, 1);
+					godotVoiceProcessor = godotVoiceAudioContext.createScriptProcessor(4096, 1, 1);
 					godotVoiceSilentGain = godotVoiceAudioContext.createGain();
 					godotVoiceSilentGain.gain.value = 0;
 
@@ -911,11 +915,36 @@
 							return;
 						}
 
+						const now = godotVoiceAudioContext.currentTime;
+
+						if (now < godotVoiceNextPacketTime) {
+							return;
+						}
+
 						const input = event.inputBuffer.getChannelData(0);
-						const pcm = new Int16Array(input.length);
+						let peak = 0;
 
 						for (let i = 0; i < input.length; i++) {
-							const sample = Math.max(-1, Math.min(1, input[i]));
+							const value = Math.abs(input[i]);
+
+							if (value > peak) {
+								peak = value;
+							}
+						}
+
+						if (peak < godotVoiceSilenceThreshold) {
+							godotVoiceNextPacketTime = now + godotVoicePacketIntervalSec;
+							return;
+						}
+
+						const sourceRate = godotVoiceAudioContext.sampleRate;
+						const step = Math.max(1, sourceRate / godotVoiceTargetSampleRate);
+						const outputLength = Math.max(1, Math.floor(input.length / step));
+						const pcm = new Int16Array(outputLength);
+
+						for (let i = 0; i < outputLength; i++) {
+							const sourceIndex = Math.min(input.length - 1, Math.floor(i * step));
+							const sample = Math.max(-1, Math.min(1, input[sourceIndex]));
 							pcm[i] = sample < 0 ? sample * 32768 : sample * 32767;
 						}
 
@@ -928,14 +957,15 @@
 
 						const packet = JSON.stringify({
 							t: "pcm16",
-							r: godotVoiceAudioContext.sampleRate,
+							r: godotVoiceTargetSampleRate,
 							d: btoa(binary)
 						});
 
+						godotVoiceNextPacketTime = now + godotVoicePacketIntervalSec;
 						godotVoiceCapturedPacketCount += 1;
 						godotVoiceOutgoingPackets.push(packet);
 
-						if (godotVoiceOutgoingPackets.length > 24) {
+						if (godotVoiceOutgoingPackets.length > 6) {
 							godotVoiceOutgoingPackets.shift();
 						}
 					};
@@ -984,6 +1014,7 @@
 
 			godotVoiceOutgoingPackets = [];
 			godotVoicePlaybackTimes = {};
+			godotVoiceNextPacketTime = 0;
 		}
 
 		function getPeerVolume(peerId) {
