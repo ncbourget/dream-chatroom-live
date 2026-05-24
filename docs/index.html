@@ -1043,7 +1043,7 @@
 			return eased * eased * godotVoiceBaseVolume;
 		}
 
-		function playGodotVoicePacket(peerId, packet) {
+		function handleGodotVoicePacket(peerId, packet) {
 			if (!packet || peerId === "" || peerId === godotVoiceLocalId) {
 				return;
 			}
@@ -1121,11 +1121,11 @@
 		};
 
 		window.playGodotVoicePacket = function (peerId, packet) {
-			playGodotVoicePacket(String(peerId || ""), String(packet || ""));
+			handleGodotVoicePacket(String(peerId || ""), String(packet || ""));
 		};
 
 		window.receiveGodotVoicePacket = function (peerId, packet) {
-			playGodotVoicePacket(String(peerId || ""), String(packet || ""));
+			handleGodotVoicePacket(String(peerId || ""), String(packet || ""));
 		};
 
 		window.getGodotVoiceDebug = function () {
