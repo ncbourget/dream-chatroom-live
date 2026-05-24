@@ -240,6 +240,21 @@
 			color: #111;
 		}
 
+		#voice-debug {
+			position: fixed;
+			left: 10px;
+			bottom: 10px;
+			z-index: 10000;
+			display: none;
+			max-width: min(92vw, 420px);
+			background: rgba(0, 0, 0, 0.78);
+			color: white;
+			font: 12px/1.35 monospace;
+			padding: 10px;
+			white-space: pre-wrap;
+			pointer-events: none;
+		}
+
 		#guestbook {
 			position: fixed;
 			inset: 0;
@@ -478,6 +493,7 @@
 	<video id="godot-face-video" autoplay playsinline muted></video>
 	<canvas id="godot-face-canvas"></canvas>
 	<canvas id="image-convert-canvas"></canvas>
+	<div id="voice-debug"></div>
 
 	<script>
 		const BUILD_TAG = "v20-proximity-voice-mic-select";
@@ -499,6 +515,7 @@
 		const godotFaceCtx = godotFaceCanvas.getContext("2d", { willReadFrequently: true });
 		const imageConvertCanvas = document.getElementById("image-convert-canvas");
 		const imageConvertCtx = imageConvertCanvas.getContext("2d");
+		const voiceDebug = document.getElementById("voice-debug");
 
 		let godotFaceStream = null;
 		let godotFaceSize = 80;
@@ -522,10 +539,13 @@
 			let godotVoiceEnabled = false;
 			let godotVoiceCapturedPacketCount = 0;
 			let godotVoicePlayedPacketCount = 0;
+			let godotVoiceLastPeak = 0;
+			let godotVoiceLastPacketTime = 0;
+			let godotVoiceLastPlayedPeer = "";
 			let godotVoiceNextPacketTime = 0;
 			let godotVoiceTargetSampleRate = 8000;
 			let godotVoicePacketIntervalSec = 0.12;
-			let godotVoiceSilenceThreshold = 0.012;
+			let godotVoiceSilenceThreshold = 0.004;
 			let godotVoiceMaxDistance = 15.0;
 			let godotVoiceMinDistance = 2.0;
 			let godotVoiceBaseVolume = 1.0;
@@ -932,6 +952,8 @@
 							}
 						}
 
+						godotVoiceLastPeak = peak;
+
 						if (peak < godotVoiceSilenceThreshold) {
 							godotVoiceNextPacketTime = now + godotVoicePacketIntervalSec;
 							return;
@@ -963,6 +985,7 @@
 
 						godotVoiceNextPacketTime = now + godotVoicePacketIntervalSec;
 						godotVoiceCapturedPacketCount += 1;
+						godotVoiceLastPacketTime = Date.now();
 						godotVoiceOutgoingPackets.push(packet);
 
 						if (godotVoiceOutgoingPackets.length > 6) {
@@ -1095,6 +1118,7 @@
 				source.start(startAt);
 
 				godotVoicePlayedPacketCount += 1;
+				godotVoiceLastPlayedPeer = peerId;
 				godotVoicePlaybackTimes[peerId] = startAt + audioBuffer.duration;
 
 				if (godotVoicePlaybackTimes[peerId] < now - 1.0) {
@@ -1135,6 +1159,9 @@
 				queued: godotVoiceOutgoingPackets.length,
 				captured: godotVoiceCapturedPacketCount,
 				played: godotVoicePlayedPacketCount,
+				peak: godotVoiceLastPeak,
+				lastPacketAgoMs: godotVoiceLastPacketTime > 0 ? Date.now() - godotVoiceLastPacketTime : null,
+				lastPlayedPeer: godotVoiceLastPlayedPeer,
 				sampleRate: godotVoiceAudioContext ? godotVoiceAudioContext.sampleRate : 0,
 				audioState: godotVoiceAudioContext ? godotVoiceAudioContext.state : "",
 				hasStream: !!godotVoiceStream,
@@ -1142,6 +1169,38 @@
 				positions: Object.keys(godotVoicePositions).length
 			};
 		};
+
+		function updateVoiceDebug() {
+			if (!voiceDebug) {
+				return;
+			}
+
+			const enabled = new URLSearchParams(window.location.search).get("voiceDebug") === "1";
+
+			if (!enabled) {
+				voiceDebug.style.display = "none";
+				return;
+			}
+
+			const data = window.getGodotVoiceDebug();
+			voiceDebug.style.display = "block";
+			voiceDebug.textContent = [
+				`voice enabled: ${data.enabled}`,
+				`audio state: ${data.audioState}`,
+				`has stream: ${data.hasStream}`,
+				`has processor: ${data.hasProcessor}`,
+				`peak: ${Number(data.peak || 0).toFixed(4)}`,
+				`captured: ${data.captured}`,
+				`queued: ${data.queued}`,
+				`played: ${data.played}`,
+				`last packet ago: ${data.lastPacketAgoMs}`,
+				`last played peer: ${data.lastPlayedPeer}`,
+				`positions: ${data.positions}`,
+				`sample rate: ${data.sampleRate}`
+			].join("\n");
+		}
+
+		setInterval(updateVoiceDebug, 250);
 
 		window.setGodotVoicePositions = function (localId, positionsJson) {
 			godotVoiceLocalId = String(localId || "");
