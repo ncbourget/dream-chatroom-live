@@ -543,9 +543,11 @@
 			let godotVoiceLastPacketTime = 0;
 			let godotVoiceLastPlayedPeer = "";
 			let godotVoiceNextPacketTime = 0;
+			let godotVoiceHoldUntil = 0;
 			let godotVoiceTargetSampleRate = 8000;
-			let godotVoicePacketIntervalSec = 0.12;
-			let godotVoiceSilenceThreshold = 0.004;
+			let godotVoicePacketIntervalSec = 0.08;
+			let godotVoiceSilenceThreshold = 0.0025;
+			let godotVoiceHoldSec = 0.35;
 			let godotVoiceMaxDistance = 15.0;
 			let godotVoiceMinDistance = 2.0;
 			let godotVoiceBaseVolume = 1.0;
@@ -954,7 +956,11 @@
 
 						godotVoiceLastPeak = peak;
 
-						if (peak < godotVoiceSilenceThreshold) {
+						if (peak >= godotVoiceSilenceThreshold) {
+							godotVoiceHoldUntil = now + godotVoiceHoldSec;
+						}
+
+						if (peak < godotVoiceSilenceThreshold && now > godotVoiceHoldUntil) {
 							godotVoiceNextPacketTime = now + godotVoicePacketIntervalSec;
 							return;
 						}
@@ -1038,6 +1044,7 @@
 			godotVoiceOutgoingPackets = [];
 			godotVoicePlaybackTimes = {};
 			godotVoiceNextPacketTime = 0;
+			godotVoiceHoldUntil = 0;
 		}
 
 		function getPeerVolume(peerId) {
