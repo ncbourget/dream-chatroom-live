@@ -522,9 +522,12 @@
 		let selectedImageDataUrl = "";
 		let selectedImageName = "";
 
-		let currentPage = 1;
-		let totalPages = 1;
-		window.lastMessage = "";
+			let currentPage = 1;
+			let totalPages = 1;
+			window.lastMessage = "";
+			let godotSessionStarted = false;
+			let godotHiddenAt = 0;
+			let godotResumeReloadThresholdMs = 8000;
 
 			let selectedMicDeviceId = "";
 			let godotVoiceAudioContext = null;
@@ -1229,14 +1232,47 @@
 			}
 		};
 
-		window.setGodotVoiceConfig = function (minDistance, maxDistance, baseVolume) {
-			godotVoiceMinDistance = Number(minDistance || godotVoiceMinDistance);
-			godotVoiceMaxDistance = Number(maxDistance || godotVoiceMaxDistance);
-			godotVoiceBaseVolume = Number(baseVolume || godotVoiceBaseVolume);
-		};
+			window.setGodotVoiceConfig = function (minDistance, maxDistance, baseVolume) {
+				godotVoiceMinDistance = Number(minDistance || godotVoiceMinDistance);
+				godotVoiceMaxDistance = Number(maxDistance || godotVoiceMaxDistance);
+				godotVoiceBaseVolume = Number(baseVolume || godotVoiceBaseVolume);
+			};
 
-		async function invokeGodotStart() {
-			const name = nameInput.value.trim();
+			function markGodotPageHidden() {
+				if (!godotSessionStarted) {
+					return;
+				}
+
+				godotHiddenAt = Date.now();
+			}
+
+			function handleGodotPageResume() {
+				if (!godotSessionStarted || godotHiddenAt <= 0) {
+					return;
+				}
+
+				const hiddenForMs = Date.now() - godotHiddenAt;
+				godotHiddenAt = 0;
+
+				if (hiddenForMs >= godotResumeReloadThresholdMs) {
+					window.location.reload();
+				}
+			}
+
+			document.addEventListener("visibilitychange", function () {
+				if (document.hidden) {
+					markGodotPageHidden();
+				} else {
+					handleGodotPageResume();
+				}
+			});
+
+			window.addEventListener("pagehide", markGodotPageHidden);
+			window.addEventListener("pageshow", handleGodotPageResume);
+			window.addEventListener("focus", handleGodotPageResume);
+
+			async function invokeGodotStart() {
+				const name = nameInput.value.trim();
 
 			if (!name || !selectedImageDataUrl) {
 				updateStartState();
@@ -1250,10 +1286,11 @@
 				await startGodotVoiceChat();
 			}
 
-			if (window.godotWebStart) {
-				window.godotWebStart(name, selectedImageDataUrl, facecamCheckbox.checked, selectedMicDeviceId !== "__none__");
-				overlay.style.display = "none";
-			}
+				if (window.godotWebStart) {
+					godotSessionStarted = true;
+					window.godotWebStart(name, selectedImageDataUrl, facecamCheckbox.checked, selectedMicDeviceId !== "__none__");
+					overlay.style.display = "none";
+				}
 		}
 
 		startButton.addEventListener("click", invokeGodotStart);
@@ -1401,4 +1438,3 @@
 	</script>
 </body>
 </html>
-
