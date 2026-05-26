@@ -96,7 +96,15 @@
 			font-weight: 800;
 			opacity: 0.72;
 			text-align: center;
-			margin-bottom: 24px;
+			margin-bottom: 12px;
+		}
+
+		#player-count {
+			color: #00ff1e;
+			font-size: clamp(19px, 4.6vw, 24px);
+			font-weight: 900;
+			text-align: center;
+			margin: 0 0 22px 0;
 		}
 
 		.entry-field {
@@ -423,11 +431,12 @@
 </head>
 <body>
 	<div id="entry-overlay">
-		<div id="entry-panel">
-			<h1 id="entry-title">Dream Chatroom</h1>
-			<div id="entry-subtitle">Established April 2026</div>
+			<div id="entry-panel">
+				<h1 id="entry-title">Dream Chatroom</h1>
+				<div id="entry-subtitle">Established April 2026</div>
+				<div id="player-count">Players online: X</div>
 
-			<div id="preview-wrap">
+				<div id="preview-wrap">
 				<img id="preview-image" alt="shirt preview" />
 			</div>
 
@@ -508,6 +517,7 @@
 		const fileName = document.getElementById("file-name");
 		const statusText = document.getElementById("status-text");
 		const previewImage = document.getElementById("preview-image");
+		const playerCount = document.getElementById("player-count");
 
 		const godotImageInput = document.getElementById("godot-image-input");
 		const godotFaceVideo = document.getElementById("godot-face-video");
@@ -569,6 +579,35 @@
 				statusText.textContent = "* Enter a name";
 			} else {
 				statusText.textContent = "* Choose a shirt";
+			}
+		}
+
+		function updatePlayerCountText(count) {
+			if (!playerCount) {
+				return;
+			}
+
+			if (Number.isFinite(count)) {
+				playerCount.textContent = `Players online: ${count}`;
+			} else {
+				playerCount.textContent = "Players online: X";
+			}
+		}
+
+		async function loadPlayerCount() {
+			try {
+				const res = await fetch(`${GUESTBOOK_API_BASE}/api/player_count`, {
+					cache: "no-store"
+				});
+
+				if (!res.ok) {
+					throw new Error(`HTTP ${res.status}`);
+				}
+
+				const data = await res.json();
+				updatePlayerCountText(Number(data.players_online));
+			} catch (err) {
+				updatePlayerCountText(NaN);
 			}
 		}
 
@@ -1384,6 +1423,8 @@
 		updateStartState();
 		updatePaginationUI();
 		populateMicrophoneSelect();
+		loadPlayerCount();
+		setInterval(loadPlayerCount, 5000);
 
 		if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
 			navigator.mediaDevices.addEventListener("devicechange", populateMicrophoneSelect);
@@ -1449,4 +1490,3 @@
 	</script>
 </body>
 </html>
-
