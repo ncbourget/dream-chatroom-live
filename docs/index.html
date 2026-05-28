@@ -1347,6 +1347,8 @@
 		startButton.addEventListener("click", invokeGodotStart);
 
 		if (gameCanvas) {
+			gameCanvas.style.touchAction = "none";
+
 			gameCanvas.addEventListener("contextmenu", function (event) {
 				event.preventDefault();
 			});
@@ -1355,6 +1357,13 @@
 			let godotCameraOrbitLastCentroid = null;
 			let godotCameraOrbitDeltaX = 0;
 			let godotCameraOrbitDeltaY = 0;
+			let godotCameraOrbitSingleId = null;
+			let godotCameraOrbitSingleStart = null;
+			let godotCameraOrbitSingleLast = null;
+			let godotCameraOrbitSingleStartTime = 0;
+			let godotCameraOrbitSingleActive = false;
+			const godotCameraOrbitSingleDelayMs = 180;
+			const godotCameraOrbitSingleThreshold = 14;
 
 			function getGodotCameraTouchCentroid() {
 				let x = 0;
@@ -1383,12 +1392,58 @@
 				}
 			}
 
+			function resetGodotCameraSingleOrbit() {
+				godotCameraOrbitSingleId = null;
+				godotCameraOrbitSingleStart = null;
+				godotCameraOrbitSingleLast = null;
+				godotCameraOrbitSingleStartTime = 0;
+				godotCameraOrbitSingleActive = false;
+			}
+
+			function getGodotCameraSingleTouch(event) {
+				for (const touch of event.touches) {
+					if (touch.identifier === godotCameraOrbitSingleId) {
+						return touch;
+					}
+				}
+
+				return null;
+			}
+
+			function canStartGodotCameraSingleOrbit(point) {
+				if (!godotCameraOrbitSingleStart) {
+					return false;
+				}
+
+				const elapsed = performance.now() - godotCameraOrbitSingleStartTime;
+				const dx = point.x - godotCameraOrbitSingleStart.x;
+				const dy = point.y - godotCameraOrbitSingleStart.y;
+				const distance = Math.hypot(dx, dy);
+				const mostlySideways = Math.abs(dx) > Math.abs(dy) * 0.75;
+				const mostlyDownward = dy > 0 && Math.abs(dy) > Math.abs(dx) * 0.45;
+
+				return elapsed >= godotCameraOrbitSingleDelayMs
+					&& distance >= godotCameraOrbitSingleThreshold
+					&& (mostlySideways || mostlyDownward);
+			}
+
 			gameCanvas.addEventListener("touchstart", function (event) {
 				syncGodotCameraTouches(event);
 
 				if (godotCameraOrbitTouches.size >= 2) {
+					resetGodotCameraSingleOrbit();
 					godotCameraOrbitLastCentroid = getGodotCameraTouchCentroid();
 					event.preventDefault();
+				} else if (godotCameraOrbitTouches.size === 1) {
+					const touch = event.touches[0];
+					godotCameraOrbitSingleId = touch.identifier;
+					godotCameraOrbitSingleStart = {
+						x: touch.clientX,
+						y: touch.clientY
+					};
+					godotCameraOrbitSingleLast = godotCameraOrbitSingleStart;
+					godotCameraOrbitSingleStartTime = performance.now();
+					godotCameraOrbitSingleActive = false;
 				}
 			}, { passive: false });
 
@@ -1406,6 +1461,35 @@
 
 					godotCameraOrbitLastCentroid = centroid;
 					event.preventDefault();
+					return;
+				}
+
+				godotCameraOrbitLastCentroid = null;
+
+				if (godotCameraOrbitTouches.size === 1 && godotCameraOrbitSingleId !== null) {
+					const touch = getGodotCameraSingleTouch(event);
+
+					if (!touch) {
+						resetGodotCameraSingleOrbit();
+						return;
+					}
+
+					const point = {
+						x: touch.clientX,
+						y: touch.clientY
+					};
+
+					if (!godotCameraOrbitSingleActive && canStartGodotCameraSingleOrbit(point)) {
+						godotCameraOrbitSingleActive = true;
+						godotCameraOrbitSingleLast = point;
+					}
+
+					if (godotCameraOrbitSingleActive) {
+						godotCameraOrbitDeltaX += point.x - godotCameraOrbitSingleLast.x;
+						godotCameraOrbitDeltaY += point.y - godotCameraOrbitSingleLast.y;
+						godotCameraOrbitSingleLast = point;
+						event.preventDefault();
+					}
 				}
 			}, { passive: false });
 
@@ -1414,11 +1498,16 @@
 				godotCameraOrbitLastCentroid = godotCameraOrbitTouches.size >= 2
 					? getGodotCameraTouchCentroid()
 					: null;
+
+				if (godotCameraOrbitTouches.size !== 1 || !getGodotCameraSingleTouch(event)) {
+					resetGodotCameraSingleOrbit();
+				}
 			}, { passive: false });
 
 			gameCanvas.addEventListener("touchcancel", function () {
 				godotCameraOrbitTouches.clear();
 				godotCameraOrbitLastCentroid = null;
+				resetGodotCameraSingleOrbit();
 			}, { passive: false });
 
 			window.popGodotCameraOrbitDelta = function () {
@@ -1575,7 +1664,7 @@
 
 	<script src="index.js?v=20"></script>
 	<script>
-		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":13875528,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":13875464,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
 		engine.startGame({
 			canvas: document.getElementById("canvas")
 		});
