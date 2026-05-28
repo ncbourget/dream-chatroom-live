@@ -1361,6 +1361,7 @@
 			let godotCameraOrbitSingleStart = null;
 			let godotCameraOrbitSingleLast = null;
 			let godotCameraOrbitSingleStartTime = 0;
+			let godotCameraOrbitSingleLastTime = 0;
 			let godotCameraOrbitSingleActive = false;
 			let godotCameraZoomWheelAccumulator = 0;
 			let godotCameraZoomTouchAccumulator = 0;
@@ -1368,6 +1369,9 @@
 			let godotCameraZoomSteps = 0;
 			const godotCameraOrbitSingleDelayMs = 180;
 			const godotCameraOrbitSingleThreshold = 14;
+			const godotCameraOrbitSingleSpeedMin = 0.45;
+			const godotCameraOrbitSingleSpeedMax = 1.45;
+			const godotCameraOrbitSingleSpeedMultiplierMax = 2.15;
 			const godotCameraZoomWheelThreshold = 62;
 			const godotCameraZoomTouchThreshold = 24;
 
@@ -1414,6 +1418,7 @@
 				godotCameraOrbitSingleStart = null;
 				godotCameraOrbitSingleLast = null;
 				godotCameraOrbitSingleStartTime = 0;
+				godotCameraOrbitSingleLastTime = 0;
 				godotCameraOrbitSingleActive = false;
 			}
 
@@ -1444,6 +1449,20 @@
 					&& (mostlySideways || mostlyDownward);
 			}
 
+			function getGodotCameraSingleOrbitSpeedMultiplier(deltaX, deltaY, elapsedMs) {
+				const speed = Math.hypot(deltaX, deltaY) / Math.max(elapsedMs, 1);
+
+				if (speed <= godotCameraOrbitSingleSpeedMin) {
+					return 1;
+				}
+
+				const amount = Math.min(
+					1,
+					(speed - godotCameraOrbitSingleSpeedMin) / (godotCameraOrbitSingleSpeedMax - godotCameraOrbitSingleSpeedMin)
+				);
+				return 1 + amount * (godotCameraOrbitSingleSpeedMultiplierMax - 1);
+			}
+
 			gameCanvas.addEventListener("touchstart", function (event) {
 				syncGodotCameraTouches(event);
 
@@ -1462,6 +1481,7 @@
 					};
 					godotCameraOrbitSingleLast = godotCameraOrbitSingleStart;
 					godotCameraOrbitSingleStartTime = performance.now();
+					godotCameraOrbitSingleLastTime = godotCameraOrbitSingleStartTime;
 					godotCameraOrbitSingleActive = false;
 				}
 			}, { passive: false });
@@ -1517,13 +1537,22 @@
 
 					if (!godotCameraOrbitSingleActive && canStartGodotCameraSingleOrbit(point)) {
 						godotCameraOrbitSingleActive = true;
-						godotCameraOrbitSingleLast = point;
 					}
 
 					if (godotCameraOrbitSingleActive) {
-						godotCameraOrbitDeltaX += point.x - godotCameraOrbitSingleLast.x;
-						godotCameraOrbitDeltaY += point.y - godotCameraOrbitSingleLast.y;
+						const now = performance.now();
+						const deltaX = point.x - godotCameraOrbitSingleLast.x;
+						const deltaY = point.y - godotCameraOrbitSingleLast.y;
+						const multiplier = getGodotCameraSingleOrbitSpeedMultiplier(
+							deltaX,
+							deltaY,
+							now - godotCameraOrbitSingleLastTime
+						);
+
+						godotCameraOrbitDeltaX += deltaX * multiplier;
+						godotCameraOrbitDeltaY += deltaY * multiplier;
 						godotCameraOrbitSingleLast = point;
+						godotCameraOrbitSingleLastTime = now;
 						event.preventDefault();
 					}
 				}
@@ -1739,4 +1768,3 @@
 	</script>
 </body>
 </html>
-
