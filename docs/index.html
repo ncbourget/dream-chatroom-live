@@ -398,20 +398,219 @@
 			padding-top: 12px;
 		}
 
+		#entry-overlay,
+		#guestbook,
+		#boombox {
+			background: rgba(0, 0, 0, 0.82);
+			backdrop-filter: blur(4px);
+		}
+
+		#entry-overlay {
+			align-items: center;
+			padding: 20px;
+		}
+
+		#entry-panel,
+		#guestbook .guestbook-panel,
+		#boombox .boombox-panel {
+			width: min(92vw, 420px);
+			max-height: min(88vh, 900px);
+			background: rgba(20, 20, 20, 0.92);
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			padding: 18px;
+			box-sizing: border-box;
+			color: white;
+			overflow-y: auto;
+			overflow-x: hidden;
+		}
+
+		#entry-title,
+		.guestbook-title,
+		.boombox-title {
+			font-size: clamp(28px, 6vw, 42px);
+			line-height: 1;
+			font-weight: 700;
+			margin: 0;
+			text-align: left;
+		}
+
+		#entry-subtitle,
+		.boombox-subhead {
+			font-size: 16px;
+			font-weight: 700;
+			opacity: 0.78;
+			line-height: 1.25;
+			text-align: center;
+			margin: 8px 0 10px 0;
+		}
+
+		#entry-title,
+		#entry-subtitle,
+		#player-count {
+			text-align: center;
+		}
+
+		#player-count {
+			font-size: 16px;
+			margin: 0 0 18px 0;
+		}
+
+		#name-input,
+		#pick-image-button,
+		#start-button,
+		#mic-select,
+		#boomboxUrl,
+		#submitBoombox {
+			border-radius: 0;
+			border: 1px solid rgba(255, 255, 255, 0.16);
+		}
+
+		#boombox {
+			position: fixed;
+			inset: 0;
+			display: none;
+			z-index: 9999;
+			align-items: center;
+			justify-content: center;
+			padding: 20px;
+			box-sizing: border-box;
+		}
+
+		.boombox-topbar {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			gap: 12px;
+			margin-bottom: 18px;
+		}
+
+		#closeBoombox {
+			appearance: none;
+			border: 1px solid rgba(255,255,255,0.16);
+			background: white;
+			color: black;
+			padding: 10px 16px;
+			font-size: 14px;
+			cursor: pointer;
+			flex: 0 0 auto;
+		}
+
+		#boomboxCurrentTitle {
+			color: #ffe600;
+			font-size: 18px;
+			font-weight: 800;
+			line-height: 1.15;
+			text-align: center;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			margin-bottom: 18px;
+		}
+
+		.boombox-form {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			margin-bottom: 20px;
+		}
+
+		#boomboxUrl {
+			width: 100%;
+			min-height: 46px;
+			box-sizing: border-box;
+			background: #5b5b5b;
+			color: white;
+			padding: 9px 16px;
+			font-size: 16px;
+			font-weight: 800;
+			outline: none;
+		}
+
+		#boomboxUrl::placeholder {
+			color: rgba(255, 255, 255, 0.72);
+			opacity: 1;
+		}
+
+		#submitBoombox {
+			appearance: none;
+			width: 100%;
+			min-height: 44px;
+			background: white;
+			color: black;
+			font-size: 16px;
+			font-weight: 800;
+			cursor: pointer;
+		}
+
+		#boomboxStatus {
+			min-height: 18px;
+			font-size: 13px;
+			font-weight: 700;
+			text-align: center;
+			opacity: 0.75;
+		}
+
+		.boombox-queue-title {
+			font-size: 16px;
+			font-weight: 700;
+			text-align: center;
+			margin-bottom: 12px;
+		}
+
+		#boomboxQueue {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.boombox-queue-item {
+			border: 1px solid rgba(255,255,255,0.20);
+			background: rgba(255,255,255,0.03);
+			padding: 10px 12px;
+			min-width: 0;
+		}
+
+		.boombox-queue-song {
+			color: #ffe600;
+			font-size: 14px;
+			font-weight: 800;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.boombox-queue-user {
+			font-size: 12px;
+			opacity: 0.78;
+			margin-top: 4px;
+		}
+
+		#soundcloud-player-wrap {
+			position: fixed;
+			width: 1px;
+			height: 1px;
+			left: -100px;
+			bottom: -100px;
+			overflow: hidden;
+			opacity: 0;
+			pointer-events: none;
+		}
+
 		@media (max-width: 520px) {
 			#entry-overlay,
-			#guestbook {
+			#guestbook,
+			#boombox {
 				padding: 16px;
 			}
 
 			#entry-panel,
-			#guestbook .guestbook-panel {
+			#guestbook .guestbook-panel,
+			#boombox .boombox-panel {
 				width: min(92vw, 420px);
 			}
 
 			#entry-panel {
-				width: min(88vw, 330px);
-				padding: 0 0 14px 0;
+				padding: 16px;
 			}
 
 			#guestbook .guestbook-panel {
@@ -493,6 +692,35 @@
 		</div>
 	</div>
 
+	<div id="boombox" class="overlay-backdrop">
+		<div class="boombox-panel mobile-panel">
+			<div class="boombox-topbar">
+				<div class="boombox-title">Boombox</div>
+				<button id="closeBoombox" type="button">Close</button>
+			</div>
+
+			<div class="boombox-subhead">♫ Now playing:</div>
+			<div id="boomboxCurrentTitle">Nothing yet</div>
+
+			<div class="boombox-form">
+				<input
+					id="boomboxUrl"
+					type="text"
+					placeholder="soundcloud link here"
+					autocomplete="off"
+					autocapitalize="none"
+					autocorrect="off"
+					spellcheck="false"
+				/>
+				<button id="submitBoombox" type="button">add to queue</button>
+				<div id="boomboxStatus"></div>
+			</div>
+
+			<div class="boombox-queue-title">Queue</div>
+			<div id="boomboxQueue"></div>
+		</div>
+	</div>
+
 	<input id="godot-image-input" type="file" accept="image/*" />
 
 	<canvas id="canvas">
@@ -503,7 +731,19 @@
 	<canvas id="godot-face-canvas"></canvas>
 	<canvas id="image-convert-canvas"></canvas>
 	<div id="voice-debug"></div>
+	<div id="soundcloud-player-wrap">
+		<iframe
+			id="soundcloud-player"
+			width="100%"
+			height="100%"
+			scrolling="no"
+			frameborder="no"
+			allow="autoplay"
+			src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com"
+		></iframe>
+	</div>
 
+	<script src="https://w.soundcloud.com/player/api.js"></script>
 	<script>
 		const BUILD_TAG = "v20-proximity-voice-mic-select";
 		const GUESTBOOK_API_BASE = "https://dream-chatroom.onrender.com";
@@ -519,6 +759,12 @@
 		const previewImage = document.getElementById("preview-image");
 		const playerCount = document.getElementById("player-count");
 		const gameCanvas = document.getElementById("canvas");
+		const boomboxPanel = document.getElementById("boombox");
+		const boomboxUrl = document.getElementById("boomboxUrl");
+		const boomboxCurrentTitle = document.getElementById("boomboxCurrentTitle");
+		const boomboxQueue = document.getElementById("boomboxQueue");
+		const boomboxStatus = document.getElementById("boomboxStatus");
+		const soundcloudIframe = document.getElementById("soundcloud-player");
 
 		const godotImageInput = document.getElementById("godot-image-input");
 		const godotFaceVideo = document.getElementById("godot-face-video");
@@ -562,9 +808,27 @@
 			let godotVoicePacketIntervalSec = 0.08;
 			let godotVoiceSilenceThreshold = 0.0025;
 			let godotVoiceHoldSec = 0.35;
-				let godotVoiceMaxDistance = 32.0;
-				let godotVoiceMinDistance = 4.0;
+			let godotVoiceMaxDistance = 32.0;
+			let godotVoiceMinDistance = 4.0;
 			let godotVoiceBaseVolume = 1.0;
+			let boomboxSubmissions = [];
+			let boomboxState = {
+				current: null,
+				queue: [],
+				started_at: 0,
+				server_time: 0,
+				max_track_ms: 180000
+			};
+			let boomboxLocalPosition = null;
+			let boomboxPosition = null;
+			let boomboxMinDistance = 4.0;
+			let boomboxMaxDistance = 32.0;
+			let boomboxBaseVolume = 0.75;
+			let boomboxWidget = null;
+			let boomboxWidgetReady = false;
+			let boomboxLoadedTrackId = "";
+			let boomboxLoadedUrl = "";
+			let boomboxCurrentTitleText = "";
 
 		function updateStartState() {
 			const hasName = nameInput.value.trim().length > 0;
@@ -746,6 +1010,225 @@
 
 		window.showGuestbook = showGuestbook;
 		window.hideGuestbook = hideGuestbook;
+
+		function readableSoundCloudTitle(url) {
+			try {
+				const parsed = new URL(String(url || ""));
+				const parts = parsed.pathname
+					.split("/")
+					.filter(Boolean)
+					.map(part => part.replaceAll("-", " "));
+
+				if (parts.length === 0) {
+					return "SoundCloud track";
+				}
+
+				return parts[parts.length - 1];
+			} catch (err) {
+				return "SoundCloud track";
+			}
+		}
+
+		function getBoomboxItemTitle(item) {
+			if (!item) {
+				return "";
+			}
+
+			return String(item.title || "").trim() || readableSoundCloudTitle(item.url);
+		}
+
+		function renderBoomboxState() {
+			const current = boomboxState.current;
+
+			if (current) {
+				const currentTitle = boomboxCurrentTitleText || getBoomboxItemTitle(current);
+				boomboxCurrentTitle.textContent = currentTitle || "Loading...";
+			} else {
+				boomboxCurrentTitle.textContent = "Nothing yet";
+			}
+
+			boomboxQueue.innerHTML = "";
+
+			const queue = Array.isArray(boomboxState.queue) ? boomboxState.queue.slice(0, 10) : [];
+
+			if (queue.length === 0) {
+				const empty = document.createElement("div");
+				empty.className = "boombox-queue-item";
+				empty.innerHTML = `
+					<div class="boombox-queue-song">Empty</div>
+					<div class="boombox-queue-user">walk up and add something</div>
+				`;
+				boomboxQueue.appendChild(empty);
+				return;
+			}
+
+			for (const item of queue) {
+				const div = document.createElement("div");
+				div.className = "boombox-queue-item";
+				div.innerHTML = `
+					<div class="boombox-queue-song">${escapeHtml(getBoomboxItemTitle(item))}</div>
+					<div class="boombox-queue-user">${escapeHtml(item.submitted_by || "visitor")}</div>
+				`;
+				boomboxQueue.appendChild(div);
+			}
+		}
+
+		function ensureBoomboxWidget() {
+			if (boomboxWidget || typeof SC === "undefined" || !SC.Widget || !soundcloudIframe) {
+				return;
+			}
+
+			boomboxWidget = SC.Widget(soundcloudIframe);
+			boomboxWidget.bind(SC.Widget.Events.READY, function () {
+				boomboxWidgetReady = true;
+				syncBoomboxPlayer();
+				updateBoomboxVolume();
+			});
+
+			boomboxWidget.bind(SC.Widget.Events.PLAY, function () {
+				boomboxWidget.getCurrentSound(function (sound) {
+					if (sound && sound.title) {
+						boomboxCurrentTitleText = sound.title;
+						renderBoomboxState();
+					}
+				});
+			});
+		}
+
+		function getBoomboxVolume() {
+			if (!boomboxLocalPosition || !boomboxPosition) {
+				return boomboxBaseVolume;
+			}
+
+			const dx = Number(boomboxLocalPosition.x || 0) - Number(boomboxPosition.x || 0);
+			const dy = Number(boomboxLocalPosition.y || 0) - Number(boomboxPosition.y || 0);
+			const dz = Number(boomboxLocalPosition.z || 0) - Number(boomboxPosition.z || 0);
+			const distance = Math.sqrt((dx * dx) + (dy * dy) + (dz * dz));
+
+			if (distance <= boomboxMinDistance) {
+				return boomboxBaseVolume;
+			}
+
+			if (distance >= boomboxMaxDistance) {
+				return 0.0;
+			}
+
+			const t = (distance - boomboxMinDistance) / (boomboxMaxDistance - boomboxMinDistance);
+			const eased = 1.0 - Math.min(1.0, Math.max(0.0, t));
+			return Math.sin(eased * Math.PI * 0.5) * boomboxBaseVolume;
+		}
+
+		function updateBoomboxVolume() {
+			ensureBoomboxWidget();
+
+			if (!boomboxWidget || !boomboxWidgetReady) {
+				return;
+			}
+
+			const volume = Math.round(Math.min(1.0, Math.max(0.0, getBoomboxVolume())) * 100);
+			boomboxWidget.setVolume(volume);
+		}
+
+		function syncBoomboxPlayer() {
+			ensureBoomboxWidget();
+
+			if (!boomboxWidget || !boomboxWidgetReady) {
+				return;
+			}
+
+			const current = boomboxState.current;
+
+			if (!current || !current.url) {
+				boomboxLoadedTrackId = "";
+				boomboxLoadedUrl = "";
+				boomboxCurrentTitleText = "";
+				boomboxWidget.pause();
+				renderBoomboxState();
+				return;
+			}
+
+			const trackId = String(current.id || current.url || "");
+
+			if (trackId === boomboxLoadedTrackId && current.url === boomboxLoadedUrl) {
+				updateBoomboxVolume();
+				return;
+			}
+
+			boomboxLoadedTrackId = trackId;
+			boomboxLoadedUrl = current.url;
+			boomboxCurrentTitleText = "";
+			renderBoomboxState();
+
+			const elapsedMs = Math.max(
+				0,
+				Number(boomboxState.server_time || Date.now()) - Number(boomboxState.started_at || Date.now())
+			);
+
+			boomboxWidget.load(current.url, {
+				auto_play: true,
+				show_artwork: false,
+				visual: false,
+				callback: function () {
+					updateBoomboxVolume();
+					boomboxWidget.seekTo(elapsedMs);
+					boomboxWidget.play();
+					boomboxWidget.getCurrentSound(function (sound) {
+						if (sound && sound.title) {
+							boomboxCurrentTitleText = sound.title;
+							renderBoomboxState();
+						}
+					});
+				}
+			});
+		}
+
+		function showBoombox() {
+			boomboxPanel.style.display = "flex";
+			window.lastMessage = "";
+			boomboxStatus.textContent = "";
+			renderBoomboxState();
+			ensureBoomboxWidget();
+			syncBoomboxPlayer();
+		}
+
+		function hideBoombox() {
+			boomboxPanel.style.display = "none";
+			window.lastMessage = "boombox_closed";
+		}
+
+		window.showBoombox = showBoombox;
+		window.hideBoombox = hideBoombox;
+
+		window.popBoomboxSubmission = function () {
+			if (boomboxSubmissions.length === 0) {
+				return "";
+			}
+
+			return boomboxSubmissions.shift();
+		};
+
+		window.setGodotBoomboxState = function (stateJson) {
+			try {
+				const parsed = typeof stateJson === "string" ? JSON.parse(stateJson) : stateJson;
+
+				if (parsed && typeof parsed === "object") {
+					boomboxState = parsed;
+					renderBoomboxState();
+					syncBoomboxPlayer();
+				}
+			} catch (err) {}
+		};
+
+		window.setGodotBoomboxListener = function (localJson, boomboxJson, minDistance, maxDistance, baseVolume) {
+			try {
+				boomboxLocalPosition = typeof localJson === "string" ? JSON.parse(localJson) : localJson;
+				boomboxPosition = typeof boomboxJson === "string" ? JSON.parse(boomboxJson) : boomboxJson;
+				boomboxMinDistance = Number(minDistance || boomboxMinDistance);
+				boomboxMaxDistance = Number(maxDistance || boomboxMaxDistance);
+				boomboxBaseVolume = Number(baseVolume || boomboxBaseVolume);
+				updateBoomboxVolume();
+			} catch (err) {}
+		};
 
 		window.openGodotImagePicker = function () {
 			godotImageInput.value = "";
@@ -1685,6 +2168,39 @@
 		};
 
 		document.getElementById("closeGuestbook").addEventListener("click", hideGuestbook);
+		document.getElementById("closeBoombox").addEventListener("click", hideBoombox);
+		document.getElementById("submitBoombox").addEventListener("click", () => {
+			const url = boomboxUrl.value.trim();
+
+			if (!url) {
+				boomboxStatus.textContent = "Paste a SoundCloud link.";
+				return;
+			}
+
+			try {
+				const parsed = new URL(url);
+				const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+
+				if (host !== "soundcloud.com" && host !== "on.soundcloud.com") {
+					boomboxStatus.textContent = "SoundCloud links only.";
+					return;
+				}
+			} catch (err) {
+				boomboxStatus.textContent = "That link does not look right.";
+				return;
+			}
+
+			boomboxSubmissions.push(url);
+			boomboxUrl.value = "";
+			boomboxStatus.textContent = "Added.";
+		});
+
+		boomboxUrl.addEventListener("keydown", (event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				document.getElementById("submitBoombox").click();
+			}
+		});
 
 		document.getElementById("prevPage").addEventListener("click", () => {
 			if (currentPage > 1) {
@@ -1761,7 +2277,7 @@
 
 	<script src="index.js?v=20"></script>
 	<script>
-		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":13977972,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":13984464,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
 		engine.startGame({
 			canvas: document.getElementById("canvas")
 		});
