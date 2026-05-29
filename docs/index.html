@@ -542,6 +542,19 @@
 			cursor: pointer;
 		}
 
+		#enableBoomboxAudio {
+			appearance: none;
+			width: 100%;
+			min-height: 38px;
+			border: 1px solid rgba(255, 255, 255, 0.16);
+			background: #ffe600;
+			color: black;
+			font-size: 14px;
+			font-weight: 800;
+			cursor: pointer;
+			display: none;
+		}
+
 		#boomboxStatus {
 			min-height: 18px;
 			font-size: 13px;
@@ -713,6 +726,7 @@
 					spellcheck="false"
 				/>
 				<button id="submitBoombox" type="button">add to queue</button>
+				<button id="enableBoomboxAudio" type="button">enable boombox audio</button>
 				<div id="boomboxStatus"></div>
 			</div>
 
@@ -764,6 +778,7 @@
 		const boomboxCurrentTitle = document.getElementById("boomboxCurrentTitle");
 		const boomboxQueue = document.getElementById("boomboxQueue");
 		const boomboxStatus = document.getElementById("boomboxStatus");
+		const enableBoomboxAudio = document.getElementById("enableBoomboxAudio");
 		const soundcloudIframe = document.getElementById("soundcloud-player");
 
 		const godotImageInput = document.getElementById("godot-image-input");
@@ -829,6 +844,8 @@
 			let boomboxLoadedTrackId = "";
 			let boomboxLoadedUrl = "";
 			let boomboxCurrentTitleText = "";
+			let boomboxFinishedTracks = [];
+			let boomboxAudioUnlocked = false;
 
 		function updateStartState() {
 			const hasName = nameInput.value.trim().length > 0;
@@ -1043,8 +1060,12 @@
 			if (current) {
 				const currentTitle = boomboxCurrentTitleText || getBoomboxItemTitle(current);
 				boomboxCurrentTitle.textContent = currentTitle || "Loading...";
+				if (!boomboxAudioUnlocked) {
+					enableBoomboxAudio.style.display = "block";
+				}
 			} else {
 				boomboxCurrentTitle.textContent = "Nothing yet";
+				enableBoomboxAudio.style.display = "none";
 			}
 
 			boomboxQueue.innerHTML = "";
@@ -1086,12 +1107,20 @@
 			});
 
 			boomboxWidget.bind(SC.Widget.Events.PLAY, function () {
+				boomboxAudioUnlocked = true;
+				enableBoomboxAudio.style.display = "none";
 				boomboxWidget.getCurrentSound(function (sound) {
 					if (sound && sound.title) {
 						boomboxCurrentTitleText = sound.title;
 						renderBoomboxState();
 					}
 				});
+			});
+
+			boomboxWidget.bind(SC.Widget.Events.FINISH, function () {
+				if (boomboxLoadedTrackId !== "") {
+					boomboxFinishedTracks.push(boomboxLoadedTrackId);
+				}
 			});
 		}
 
@@ -1161,7 +1190,9 @@
 
 			const elapsedMs = Math.max(
 				0,
-				Number(boomboxState.server_time || Date.now()) - Number(boomboxState.started_at || Date.now())
+				(Date.now() - Number(boomboxState.received_at || Date.now())) +
+					Number(boomboxState.server_time || Date.now()) -
+					Number(boomboxState.started_at || Date.now())
 			);
 
 			boomboxWidget.load(current.url, {
@@ -1171,7 +1202,11 @@
 				callback: function () {
 					updateBoomboxVolume();
 					boomboxWidget.seekTo(elapsedMs);
-					boomboxWidget.play();
+					if (boomboxAudioUnlocked) {
+						boomboxWidget.play();
+					} else {
+						boomboxWidget.play();
+					}
 					boomboxWidget.getCurrentSound(function (sound) {
 						if (sound && sound.title) {
 							boomboxCurrentTitleText = sound.title;
@@ -1180,6 +1215,23 @@
 					});
 				}
 			});
+		}
+
+		function enableBoomboxPlayback() {
+			boomboxAudioUnlocked = true;
+			enableBoomboxAudio.style.display = "none";
+			ensureBoomboxWidget();
+			updateBoomboxVolume();
+
+			if (boomboxWidget && boomboxWidgetReady) {
+				if (boomboxState.current && boomboxState.current.url) {
+					if (boomboxLoadedTrackId === String(boomboxState.current.id || boomboxState.current.url || "")) {
+						boomboxWidget.play();
+					} else {
+						syncBoomboxPlayer();
+					}
+				}
+			}
 		}
 
 		function showBoombox() {
@@ -1207,11 +1259,20 @@
 			return boomboxSubmissions.shift();
 		};
 
+		window.popBoomboxFinishedTrack = function () {
+			if (boomboxFinishedTracks.length === 0) {
+				return "";
+			}
+
+			return boomboxFinishedTracks.shift();
+		};
+
 		window.setGodotBoomboxState = function (stateJson) {
 			try {
 				const parsed = typeof stateJson === "string" ? JSON.parse(stateJson) : stateJson;
 
 				if (parsed && typeof parsed === "object") {
+					parsed.received_at = Date.now();
 					boomboxState = parsed;
 					renderBoomboxState();
 					syncBoomboxPlayer();
@@ -2169,7 +2230,9 @@
 
 		document.getElementById("closeGuestbook").addEventListener("click", hideGuestbook);
 		document.getElementById("closeBoombox").addEventListener("click", hideBoombox);
+		enableBoomboxAudio.addEventListener("click", enableBoomboxPlayback);
 		document.getElementById("submitBoombox").addEventListener("click", () => {
+			enableBoomboxPlayback();
 			const url = boomboxUrl.value.trim();
 
 			if (!url) {
@@ -2277,7 +2340,7 @@
 
 	<script src="index.js?v=20"></script>
 	<script>
-		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":13984464,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":13985296,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
 		engine.startGame({
 			canvas: document.getElementById("canvas")
 		});
