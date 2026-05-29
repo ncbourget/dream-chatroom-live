@@ -542,6 +542,24 @@
 			cursor: pointer;
 		}
 
+		#boomboxVoteskip {
+			appearance: none;
+			width: 100%;
+			min-height: 38px;
+			border: 1px solid rgba(255, 255, 255, 0.16);
+			background: #292929;
+			color: white;
+			font-size: 14px;
+			font-weight: 800;
+			cursor: pointer;
+			margin-bottom: 18px;
+		}
+
+		#boomboxVoteskip:disabled {
+			opacity: 0.45;
+			cursor: default;
+		}
+
 		#enableBoomboxAudio {
 			appearance: none;
 			width: 100%;
@@ -730,6 +748,7 @@
 				<div id="boomboxStatus"></div>
 			</div>
 
+			<button id="boomboxVoteskip" type="button">vote skip</button>
 			<div class="boombox-queue-title">Queue</div>
 			<div id="boomboxQueue"></div>
 		</div>
@@ -779,6 +798,7 @@
 		const boomboxQueue = document.getElementById("boomboxQueue");
 		const boomboxStatus = document.getElementById("boomboxStatus");
 		const enableBoomboxAudio = document.getElementById("enableBoomboxAudio");
+		const boomboxVoteskip = document.getElementById("boomboxVoteskip");
 		const soundcloudIframe = document.getElementById("soundcloud-player");
 
 		const godotImageInput = document.getElementById("godot-image-input");
@@ -827,12 +847,15 @@
 			let godotVoiceMinDistance = 4.0;
 			let godotVoiceBaseVolume = 1.0;
 			let boomboxSubmissions = [];
+			let boomboxVoteskipRequests = 0;
 			let boomboxState = {
 				current: null,
 				queue: [],
 				started_at: 0,
 				server_time: 0,
-				max_track_ms: 180000
+				max_track_ms: 180000,
+				voteskip_count: 0,
+				voteskip_target: 1
 			};
 			let boomboxLocalPosition = null;
 			let boomboxPosition = null;
@@ -846,6 +869,8 @@
 			let boomboxCurrentTitleText = "";
 			let boomboxFinishedTracks = [];
 			let boomboxAudioUnlocked = false;
+			let boomboxVotedTrackId = "";
+			let boomboxLastDriftCorrection = 0;
 
 		function updateStartState() {
 			const hasName = nameInput.value.trim().length > 0;
@@ -1054,18 +1079,43 @@
 			return String(item.title || "").trim() || readableSoundCloudTitle(item.url);
 		}
 
+		function extractSoundCloudUrl(value) {
+			const raw = String(value || "").trim();
+			const match = raw.match(/https?:\/\/[^\s<>"']+/i);
+			return match ? match[0] : raw;
+		}
+
+		function isSoundCloudUrl(value) {
+			try {
+				const parsed = new URL(extractSoundCloudUrl(value));
+				const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+				return host === "soundcloud.com" ||
+					host === "m.soundcloud.com" ||
+					host === "on.soundcloud.com" ||
+					host === "snd.sc";
+			} catch (err) {
+				return false;
+			}
+		}
+
 		function renderBoomboxState() {
 			const current = boomboxState.current;
+			const voteCount = Math.max(0, Number(boomboxState.voteskip_count || 0));
+			const voteTarget = Math.max(1, Number(boomboxState.voteskip_target || 1));
+			const currentTrackId = current ? String(current.id || current.url || "") : "";
 
 			if (current) {
 				const currentTitle = boomboxCurrentTitleText || getBoomboxItemTitle(current);
 				boomboxCurrentTitle.textContent = currentTitle || "Loading...";
-				if (!boomboxAudioUnlocked) {
-					enableBoomboxAudio.style.display = "block";
-				}
+				enableBoomboxAudio.style.display = "none";
+				boomboxVoteskip.disabled = boomboxVotedTrackId === currentTrackId;
+				boomboxVoteskip.textContent = `vote skip (${voteCount}/${voteTarget})`;
 			} else {
 				boomboxCurrentTitle.textContent = "Nothing yet";
 				enableBoomboxAudio.style.display = "none";
+				boomboxVoteskip.disabled = true;
+				boomboxVoteskip.textContent = "vote skip";
+				boomboxVotedTrackId = "";
 			}
 
 			boomboxQueue.innerHTML = "";
@@ -1175,6 +1225,25 @@
 			boomboxWidget.seekTo(getBoomboxElapsedMs());
 		}
 
+		function correctBoomboxDrift() {
+			if (!boomboxWidget || !boomboxWidgetReady || !boomboxState.current || !boomboxAudioUnlocked) {
+				return;
+			}
+
+			const now = Date.now();
+			if (now - boomboxLastDriftCorrection < 5000) {
+				return;
+			}
+
+			boomboxLastDriftCorrection = now;
+			boomboxWidget.getPosition(function (position) {
+				const expected = getBoomboxElapsedMs();
+				if (Math.abs(Number(position || 0) - expected) > 1500) {
+					boomboxWidget.seekTo(expected);
+				}
+			});
+		}
+
 		function syncBoomboxPlayer() {
 			ensureBoomboxWidget();
 
@@ -1243,6 +1312,8 @@
 			}
 		}
 
+		setInterval(correctBoomboxDrift, 1000);
+
 		function showBoombox() {
 			boomboxPanel.style.display = "flex";
 			window.lastMessage = "";
@@ -1274,6 +1345,15 @@
 			}
 
 			return boomboxFinishedTracks.shift();
+		};
+
+		window.popBoomboxVoteskip = function () {
+			if (boomboxVoteskipRequests <= 0) {
+				return false;
+			}
+
+			boomboxVoteskipRequests -= 1;
+			return true;
 		};
 
 		window.setGodotBoomboxState = function (stateJson) {
@@ -1885,6 +1965,7 @@
 
 			await unlockVoiceAudio();
 			await testGodotAudio();
+			enableBoomboxPlayback();
 
 			if (selectedMicDeviceId !== "__none__") {
 				await startGodotVoiceChat();
@@ -2240,25 +2321,28 @@
 		document.getElementById("closeGuestbook").addEventListener("click", hideGuestbook);
 		document.getElementById("closeBoombox").addEventListener("click", hideBoombox);
 		enableBoomboxAudio.addEventListener("click", enableBoomboxPlayback);
+		boomboxVoteskip.addEventListener("click", () => {
+			if (!boomboxState.current) {
+				return;
+			}
+
+			boomboxVotedTrackId = String(boomboxState.current.id || boomboxState.current.url || "");
+			boomboxVoteskipRequests += 1;
+			boomboxVoteskip.disabled = true;
+			boomboxStatus.textContent = "Skip vote sent.";
+		});
+
 		document.getElementById("submitBoombox").addEventListener("click", () => {
 			enableBoomboxPlayback();
-			const url = boomboxUrl.value.trim();
+			const url = extractSoundCloudUrl(boomboxUrl.value);
 
 			if (!url) {
 				boomboxStatus.textContent = "Paste a SoundCloud link.";
 				return;
 			}
 
-			try {
-				const parsed = new URL(url);
-				const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
-
-				if (host !== "soundcloud.com" && host !== "on.soundcloud.com") {
-					boomboxStatus.textContent = "SoundCloud links only.";
-					return;
-				}
-			} catch (err) {
-				boomboxStatus.textContent = "That link does not look right.";
+			if (!isSoundCloudUrl(url)) {
+				boomboxStatus.textContent = "SoundCloud links only.";
 				return;
 			}
 
@@ -2349,7 +2433,7 @@
 
 	<script src="index.js?v=20"></script>
 	<script>
-		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":13989252,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":13989588,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
 		engine.startGame({
 			canvas: document.getElementById("canvas")
 		});
