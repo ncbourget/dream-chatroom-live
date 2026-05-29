@@ -1158,6 +1158,23 @@
 			boomboxWidget.setVolume(volume);
 		}
 
+		function getBoomboxElapsedMs() {
+			return Math.max(
+				0,
+				(Date.now() - Number(boomboxState.received_at || Date.now())) +
+					Number(boomboxState.server_time || Date.now()) -
+					Number(boomboxState.started_at || Date.now())
+			);
+		}
+
+		function seekBoomboxToCurrentTime() {
+			if (!boomboxWidget || !boomboxWidgetReady || !boomboxState.current) {
+				return;
+			}
+
+			boomboxWidget.seekTo(getBoomboxElapsedMs());
+		}
+
 		function syncBoomboxPlayer() {
 			ensureBoomboxWidget();
 
@@ -1188,23 +1205,14 @@
 			boomboxCurrentTitleText = "";
 			renderBoomboxState();
 
-			const elapsedMs = Math.max(
-				0,
-				(Date.now() - Number(boomboxState.received_at || Date.now())) +
-					Number(boomboxState.server_time || Date.now()) -
-					Number(boomboxState.started_at || Date.now())
-			);
-
 			boomboxWidget.load(current.url, {
-				auto_play: true,
+				auto_play: boomboxAudioUnlocked,
 				show_artwork: false,
 				visual: false,
 				callback: function () {
 					updateBoomboxVolume();
-					boomboxWidget.seekTo(elapsedMs);
+					seekBoomboxToCurrentTime();
 					if (boomboxAudioUnlocked) {
-						boomboxWidget.play();
-					} else {
 						boomboxWidget.play();
 					}
 					boomboxWidget.getCurrentSound(function (sound) {
@@ -1226,6 +1234,7 @@
 			if (boomboxWidget && boomboxWidgetReady) {
 				if (boomboxState.current && boomboxState.current.url) {
 					if (boomboxLoadedTrackId === String(boomboxState.current.id || boomboxState.current.url || "")) {
+						seekBoomboxToCurrentTime();
 						boomboxWidget.play();
 					} else {
 						syncBoomboxPlayer();
@@ -2340,7 +2349,7 @@
 
 	<script src="index.js?v=20"></script>
 	<script>
-		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":13985296,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+		const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":13989252,"index.wasm":35739700},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
 		engine.startGame({
 			canvas: document.getElementById("canvas")
 		});
